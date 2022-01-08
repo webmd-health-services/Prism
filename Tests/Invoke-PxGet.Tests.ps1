@@ -8,18 +8,6 @@ $rootDirectory = $null
 $moduleList = @()
 $failed = $false
 
-function Get-Error
-{
-    [CmdletBinding()]
-    param(
-    )
-
-    # PackageManagement and PowerShellGet leave handled errors in Global:Error so we need to filter those errors out.
-    $Global:Error |
-        Where-Object 'ScriptStackTrace' -NotMatch '\bPowerShellGet\b' -ErrorAction Ignore |
-        Where-Object 'ScriptStackTrace' -NotMatch '\bPackageManagement\b' -ErrorAction Ignore
-}
-
 function Init
 {
     $script:rootDirectory = Get-RootDirectory

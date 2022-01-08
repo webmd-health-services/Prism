@@ -1,5 +1,19 @@
 function Invoke-PxGet
 {
+    <#
+    .SYNOPSIS
+    Invokes PxGet.
+    
+    .DESCRIPTION
+    A tool similar to nuget but for PowerShell modules. A config file in the root of a repository that specifies 
+    what modules should be installed into the PSModules directory of the repository. 
+
+    .EXAMPLE
+    Invoke-PxGet 'install'
+
+    Demonstrates how to call this function to install required PSModules.
+    #>
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
