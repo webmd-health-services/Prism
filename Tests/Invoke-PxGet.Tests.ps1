@@ -113,17 +113,8 @@ BeforeAll {
     function WhenInvokingPxGet
     {
         param(
-            [switch] $WithInvalidModuleName,
-
-            [switch] $WithNoPxGetFile,
-
-            [switch] $WithEmptyPxGetFile
+            [switch] $WithNoPxGetFile
         )
-
-        if( $WithInvalidModuleName -or $WithEmptyPxGetFile)
-        {
-            Mock -CommandName 'Find-Module' -ModuleName 'PxGet'
-        }
 
         if( $WithNoPxGetFile )
         {
@@ -193,8 +184,8 @@ Describe 'Invoke-PxGet.when no modules are found matching the modules listed in 
         Init
         AddModule -Name 'Invalid' -Version '9.9.9'
         CreatePxGetFile
-        WhenInvokingPxGet -WithInvalidModuleName -ErrorAction SilentlyContinue
-        ThenModuleNotFound -WithError "Cannot bind argument to parameter 'Modules' because it is null"
+        WhenInvokingPxGet -ErrorAction SilentlyContinue
+        ThenModuleNotFound -WithError "No match was found for the specified search criteria and module name"
     }
 }
 
@@ -211,7 +202,7 @@ Describe 'Invoke-PxGet.when there are no modules listed in pxget file' {
     It 'should fail' {
         Init
         CreatePxGetFile
-        WhenInvokingPxGet -WithEmptyPxGetFile -ErrorAction SilentlyContinue
+        WhenInvokingPxGet -ErrorAction SilentlyContinue
         ThenFailed -WithError 'The argument is null'
     }
 }
