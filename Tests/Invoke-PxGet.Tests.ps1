@@ -128,6 +128,8 @@ BeforeAll {
         catch 
         {
             $script:failed = $true
+            $DebugPreference = 'Continue'
+            Write-Debug $ErrorActionPreference
             Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
         }
     }

@@ -24,6 +24,9 @@ function Invoke-PxGet
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    $DebugPreference = 'Continue'
+    Write-Debug $ErrorActionPreference
+
     $origModulePath = $env:PSModulePath
     $psmodulesPath = Join-Path -Path $(Get-RootDirectory) -ChildPath 'PSModules'
     if( -not (Test-Path -Path $psmodulesPath) )
