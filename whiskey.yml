@@ -1,8 +1,4 @@
 
-PublishOn:
-- main
-- prerelease
-
 Build:
 - Version:
     Path: PxGet\PxGet.psd1
@@ -84,4 +80,4 @@ Build:
         TestResult:
             Enabled: true
             OutputPath: .output\pester.xml
-            TestSuiteName: Template-PSModule-OSS-Apache2.0
+            TestSuiteName: PxGet

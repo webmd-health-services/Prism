@@ -8,115 +8,117 @@ $rootDirectory = $null
 $moduleList = @()
 $failed = $false
 
-function Init
-{
-    $script:rootDirectory = Get-RootDirectory
-    $script:moduleList = @()
-    $script:failed = $false
-    $Global:Error.Clear()
-}
-
-function AddModule
-{
-    param(
-        [Parameter(Mandatory)]
-        [string] $Name,
-
-        [Parameter(Mandatory)]
-        [string] $Version
-    )
-
-    $module = @{
-        Name = $Name;
-        Version = $Version;
+BeforeAll {
+    function Init
+    {
+        $script:rootDirectory = Get-RootDirectory
+        $script:moduleList = @()
+        $script:failed = $false
+        $Global:Error.Clear()
     }
 
-    $script:moduleList += $module
-}
-
-function CreatePxGetFile
-{
-    $data = @"
+    function AddModule
     {
-        "PSModules": [
-
-"@
-
-    foreach ($module in $moduleList) 
-    {
-        $data = $data + @"
-            {
-                "Name": "$($module.Name)",
-                "Version": "$($module.Version)"
-            }
-"@
-        if( $module -ne $moduleList[-1] )
-        {
-            $data = $data + ','
+        param(
+            [Parameter(Mandatory)]
+            [string] $Name,
+    
+            [Parameter(Mandatory)]
+            [string] $Version
+        )
+    
+        $module = @{
+            Name = $Name;
+            Version = $Version;
         }
+    
+        $script:moduleList += $module
     }
-
-    $data = $data + @"
-
-        ]
-    }
+    
+    function CreatePxGetFile
+    {
+        $data = @"
+        {
+            "PSModules": [
+    
 "@
-
-    New-Item -Path $rootDirectory -ItemType 'File' -Name "pxget.json" -Value $data
-}
-
-function Get-RootDirectory
-{
-    return (Get-Item $(Get-Location)).Parent.FullName
-}
-
-function RemovePxGetFile
-{
-    Remove-Item -Path "$rootDirectory\pxget.json"
-}
-
-function Reset
-{
-    RemovePxGetFile
-}
-
-function ThenModuleNotFound
-{
-    param(
-        [Parameter(Mandatory)]
-        $WithError
-    )
-
-    $Global:Error[-1] | Should -Match $WithError
-}
-
-function ThenFailed
-{
-    param(
-        [Parameter(Mandatory)]
-        $WithError
-    )
-
-    $script:failed | Should -BeTrue
-    $Global:Error[-1] | Should -Match $WithError
-}
-
-function ThenSucceeded
-{
-    $script:failed | Should -BeFalse
-    $Global:Error | Should -BeNullOrEmpty
-}
-
-function WhenInvokingPxGet
-{
-    try 
-    {
-        Invoke-PxGet 'install'
+    
+        foreach ($module in $moduleList) 
+        {
+            $data = $data + @"
+                {
+                    "Name": "$($module.Name)",
+                    "Version": "$($module.Version)"
+                }
+"@
+            if( $module -ne $moduleList[-1] )
+            {
+                $data = $data + ','
+            }
+        }
+    
+        $data = $data + @"
+    
+            ]
+        }
+"@
+    
+        New-Item -Path $rootDirectory -ItemType 'File' -Name "pxget.json" -Value $data
     }
-    catch 
+    
+    function Get-RootDirectory
     {
-        $script:failed = $true
-        Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
+        return (Get-Item $(Get-Location)).Parent.FullName
+    }
+    
+    function RemovePxGetFile
+    {
+        Remove-Item -Path "$rootDirectory\pxget.json"
+    }
+    
+    function Reset
+    {
+        RemovePxGetFile
+    }
+    
+    function ThenModuleNotFound
+    {
+        param(
+            [Parameter(Mandatory)]
+            $WithError
+        )
+    
+        $Global:Error[-1] | Should -Match $WithError
+    }
+    
+    function ThenFailed
+    {
+        param(
+            [Parameter(Mandatory)]
+            $WithError
+        )
+    
+        $script:failed | Should -BeTrue
+        $Global:Error[-1] | Should -Match $WithError
+    }
+    
+    function ThenSucceeded
+    {
+        $script:failed | Should -BeFalse
+        $Global:Error | Should -BeNullOrEmpty
+    }
+    
+    function WhenInvokingPxGet
+    {
+        try 
+        {
+            Invoke-PxGet 'install'
+        }
+        catch 
+        {
+            $script:failed = $true
+            Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
+        }
     }
 }
 
