@@ -12,6 +12,9 @@ BeforeAll {
     function Init
     {
         $script:rootDirectory = Get-RootDirectory
+        $DebugPreference = 'Continue'
+        Write-Debug "What is the path here: $(Get-Location)"
+        Write-Debug "What it is assuming as root directory right now: $rootDirectory)"
         $script:moduleList = @()
         $script:failed = $false
         $Global:Error.Clear()
