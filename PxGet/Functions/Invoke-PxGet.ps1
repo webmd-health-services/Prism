@@ -23,6 +23,7 @@ function Invoke-PxGet
  
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+    $DebugPreference = 'Continue'
 
     $origModulePath = $env:PSModulePath
     $psmodulesPath = Join-Path -Path $(Get-RootDirectory) -ChildPath 'PSModules'
@@ -35,7 +36,9 @@ function Invoke-PxGet
     {
         # pxget should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
         # to pxget module's Modules directory ensures no other package modules get loaded.
-        $env:PSModulePath = Join-Path -Path $(Get-RootDirectory) -ChildPath 'PSModules' -Resolve
+        $env:PSModulePath = Join-Path -Path $moduleRoot -ChildPath 'PSModules' -Resolve
+        Write-Debug $moduleRoot
+        Write-Debug $(Get-RootDirectory)
         Import-Module -Name 'PackageManagement'
         Import-Module -Name 'PowerShellGet'
 
