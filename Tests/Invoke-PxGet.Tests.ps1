@@ -71,7 +71,7 @@ BeforeAll {
     
     function Get-RootDirectory
     {
-        return (Get-Item $(Get-Location)).Parent.FullName
+        return (Get-ChildItem c:\ *pxget* -recurse -directory -depth 1).FullName
     }
     
     function RemovePxGetFile
