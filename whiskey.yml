@@ -18,7 +18,7 @@ Build:
 
 - GetPowerShellModule:
     Name: PackageManagement
-    Version: 1.4*
+    Version: 1.*
 
 # Dot-sourcing files is expensive. Move all functions into .psm1 file to improve import speed. Do this before testing
 # to ensure the module still works.

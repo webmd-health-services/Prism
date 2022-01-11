@@ -110,15 +110,6 @@ BeforeAll {
     
     function WhenInvokingPxGet
     {
-        # param(
-        #     [switch] $WithNoPxGetFile
-        # )
-
-        # if( $WithNoPxGetFile )
-        # {
-        #     Mock -CommandName 'Get-Content' -ModuleName 'PxGet'
-        # }
-
         try 
         {
             Invoke-PxGet 'install'

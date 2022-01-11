@@ -35,7 +35,7 @@ function Invoke-PxGet
     {
         # pxget should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
         # to pxget module's Modules directory ensures no other package modules get loaded.
-        $env:PSModulePath = Join-Path -Path $moduleRoot -ChildPath 'Modules' -Resolve
+        $env:PSModulePath = Join-Path -Path $(Get-RootDirectory) -ChildPath 'PSModules' -Resolve
         Import-Module -Name 'PackageManagement'
         Import-Module -Name 'PowerShellGet'
 
@@ -93,6 +93,8 @@ function Invoke-PxGet
         $env:PSModulePath = $origModulePath
     }
 }
+
+Set-Alias -Name 'pxget' -Value 'Invoke-PxGet'
 
 function FindModuleFromList
 {
