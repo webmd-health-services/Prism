@@ -4,8 +4,6 @@ Set-StrictMode -Version 'Latest'
 
 & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
 
-$Global:ErrorActionPreference = [Management.Automation.ActionPreference]::SilentlyContinue
-
 $rootDirectory = $null
 $moduleList = @()
 $failed = $false
@@ -82,17 +80,7 @@ BeforeAll {
     {
         RemovePxGetFile
     }
-    
-    function ThenModuleNotFound
-    {
-        param(
-            [Parameter(Mandatory)]
-            $WithError
-        )
-    
-        $Global:Error[-1] | Should -Match $WithError
-    }
-    
+
     function ThenFailed
     {
         param(
@@ -101,6 +89,16 @@ BeforeAll {
         )
     
         $script:failed | Should -BeTrue
+        $Global:Error[-1] | Should -Match $WithError
+    }    
+
+    function ThenModuleNotFound
+    {
+        param(
+            [Parameter(Mandatory)]
+            $WithError
+        )
+    
         $Global:Error[-1] | Should -Match $WithError
     }
     
@@ -112,14 +110,14 @@ BeforeAll {
     
     function WhenInvokingPxGet
     {
-        param(
-            [switch] $WithNoPxGetFile
-        )
+        # param(
+        #     [switch] $WithNoPxGetFile
+        # )
 
-        if( $WithNoPxGetFile )
-        {
-            Mock -CommandName 'Get-Content' -ModuleName 'PxGet'
-        }
+        # if( $WithNoPxGetFile )
+        # {
+        #     Mock -CommandName 'Get-Content' -ModuleName 'PxGet'
+        # }
 
         try 
         {
@@ -128,8 +126,6 @@ BeforeAll {
         catch 
         {
             $script:failed = $true
-            $DebugPreference = 'Continue'
-            Write-Debug "ErrorActionPreference should be SilentlyContinue: $ErrorActionPreference"
             Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
         }
     }
@@ -187,7 +183,7 @@ Describe 'Invoke-PxGet.when no modules are found matching the modules listed in 
         AddModule -Name 'Invalid' -Version '9.9.9'
         CreatePxGetFile
         WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenModuleNotFound -WithError "No match was found for the specified search criteria and module name"
+        ThenModuleNotFound -WithError 'No match was found for the specified search criteria and module name'
     }
 }
 
@@ -195,7 +191,7 @@ Describe 'Invoke-PxGet.when there is no pxget file' {
     It 'should fail' {
         Init
         WhenInvokingPxGet -WithNoPxGetFile -ErrorAction SilentlyContinue
-        ThenFailed -WithError "The property 'PSModules' cannot be found on this object."
+        ThenFailed -WithError 'does not exist'
     }
 }
 
