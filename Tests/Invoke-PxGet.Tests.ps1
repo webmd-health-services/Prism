@@ -68,7 +68,7 @@ BeforeAll {
     
     function Get-RootDirectory
     {
-        return (Get-Item $($moduleRoot)).Parent.FullName
+        return (Get-Item $(Get-Location)).Parent.FullName
     }
     
     function RemovePxGetFile
