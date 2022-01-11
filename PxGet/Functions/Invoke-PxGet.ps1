@@ -25,7 +25,7 @@ function Invoke-PxGet
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $DebugPreference = 'Continue'
-    Write-Debug $ErrorActionPreference
+    Write-Debug "ErrorActionPreference should be SilentlyContinue: $ErrorActionPreference"
 
     $origModulePath = $env:PSModulePath
     $psmodulesPath = Join-Path -Path $(Get-RootDirectory) -ChildPath 'PSModules'

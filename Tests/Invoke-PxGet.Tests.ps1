@@ -129,7 +129,7 @@ BeforeAll {
         {
             $script:failed = $true
             $DebugPreference = 'Continue'
-            Write-Debug $ErrorActionPreference
+            Write-Debug "ErrorActionPreference should be SilentlyContinue: $ErrorActionPreference"
             Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
         }
     }
