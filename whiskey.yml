@@ -12,6 +12,14 @@ Build:
       Path: appveyor
       Argument: [ UpdateBuild, -Version, $(WHISKEY_SEMVER2) ]
 
+- GetPowerShellModule:
+    Name: PowerShellGet
+    Version: 2.*
+
+- GetPowerShellModule:
+    Name: PackageManagement
+    Version: 1.4*
+
 # Dot-sourcing files is expensive. Move all functions into .psm1 file to improve import speed. Do this before testing
 # to ensure the module still works.
 - MergeFile:
