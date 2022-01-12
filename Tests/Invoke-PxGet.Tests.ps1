@@ -2,81 +2,44 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
-
-$rootDirectory = $null
+$testRoot  = $null
 $moduleList = @()
 $failed = $false
 
 BeforeAll {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
+
     function Init
     {
-        $script:rootDirectory = Get-RootDirectory
+        $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        New-Item -Path $script:testRoot -ItemType 'Directory'
+
+        # Remove when done testing.
         $DebugPreference = 'Continue'
-        Write-Debug "What is the path here: $(Get-Location)"
-        Write-Debug "What it is assuming as root directory right now: $rootDirectory)"
+        Write-Debug "Get-Location: $(Get-Location)"
+        Write-Debug "Test Root: $testRoot)"
+
         $script:moduleList = @()
         $script:failed = $false
         $Global:Error.Clear()
     }
-
-    function AddModule
+    
+    function GivenPxGetFile
     {
         param(
             [Parameter(Mandatory)]
-            [string] $Name,
-    
-            [Parameter(Mandatory)]
-            [string] $Version
+            [string] $Contents
         )
-    
-        $module = @{
-            Name = $Name;
-            Version = $Version;
-        }
-    
-        $script:moduleList += $module
+
+        New-Item -Path $testRoot  -ItemType 'File' -Name "pxget.json" -Value $Contents
     }
-    
-    function CreatePxGetFile
-    {
-        $data = @"
-        {
-            "PSModules": [
-    
-"@
-    
-        foreach ($module in $moduleList) 
-        {
-            $data = $data + @"
-                {
-                    "Name": "$($module.Name)",
-                    "Version": "$($module.Version)"
-                }
-"@
-            if( $module -ne $moduleList[-1] )
-            {
-                $data = $data + ','
-            }
-        }
-    
-        $data = $data + @"
-    
-            ]
-        }
-"@
-    
-        New-Item -Path $rootDirectory -ItemType 'File' -Name "pxget.json" -Value $data
-    }
-    
-    function Get-RootDirectory
-    {
-        return (Get-ChildItem c:\ *pxget* -recurse -directory -depth 1).FullName
-    }
-    
+
     function RemovePxGetFile
     {
-        Remove-Item -Path "$rootDirectory\pxget.json"
+        if( Test-Path -Path "$testRoot \pxget.json" )
+        {
+            Remove-Item -Path "$testRoot \pxget.json"
+        }
     }
     
     function Reset
@@ -88,7 +51,7 @@ BeforeAll {
     {
         param(
             [Parameter(Mandatory)]
-            $WithError
+            [string] $WithError
         )
     
         $script:failed | Should -BeTrue
@@ -99,7 +62,7 @@ BeforeAll {
     {
         param(
             [Parameter(Mandatory)]
-            $WithError
+            [string] $WithError
         )
     
         $Global:Error[-1] | Should -Match $WithError
@@ -109,12 +72,14 @@ BeforeAll {
     {
         $script:failed | Should -BeFalse
         $Global:Error | Should -BeNullOrEmpty
+        Assert-MockCalled -CommandName 'Get-RootDirectory' -ModuleName 'PxGet' -Times 2
     }
     
     function WhenInvokingPxGet
     {
         try 
         {
+            Mock -CommandName 'Get-RootDirectory' -ModuleName 'PxGet' { return $testRoot}
             Invoke-PxGet 'install'
         }
         catch 
@@ -125,76 +90,121 @@ BeforeAll {
     }
 }
 
-Describe 'Invoke-PxGet.when there is a valid module in the pxget file' {
-    AfterEach{ Reset }
-    It 'should pass' {
-        Init
-        AddModule -Name 'PackageManagement' -Version '1.4.7'
-        CreatePxGetFile
+Describe 'Invoke-Pxget' {
+    BeforeEach { 
+        Init 
+    }
+    AfterEach { 
+        Reset 
+    }
+
+    It 'should pass when there is a valid module in the pxget file' {
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "PackageManagement",
+                    "Version": "1.4.7"
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
         WhenInvokingPxGet
         ThenSucceeded
     }
-}
 
-Describe 'Invoke-PxGet.when the module to be installed already exists' {
-    AfterEach{ Reset }
-    It 'should pass' {
-        Init
-        AddModule -Name 'PackageManagement' -Version '1.4.7'
-        CreatePxGetFile
+    It 'should pass when the module to be installed already exists' {
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "PackageManagement",
+                    "Version": "1.4.7"
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
         WhenInvokingPxGet
         ThenSucceeded
     }
-}
 
-Describe 'Invoke-PxGet.when the module to be installed has a prerelease version' {
-    AfterEach{ Reset }
-    It 'should pass' {
-        Init
-        AddModule -Name 'PackageManagement' -Version '1.2.0-preview'
-        CreatePxGetFile
+    It 'should pass when the module to be installed is a prerelease version' {
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "PackageManagement",
+                    "Version": "1.2.0-preview"
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
         WhenInvokingPxGet
         ThenSucceeded
     }
-}
 
-Describe 'Invoke-PxGet.when there are multiple modules listed in the pxget file' {
-    AfterEach{ Reset }
-    It 'should pass' {
-        Init
-        AddModule -Name 'PackageManagement' -Version '1.4.7'
-        AddModule -Name 'PowerShellGet' -Version '2.2.5'
-        CreatePxGetFile
+    It 'should pass when there are multiple modules to be installed' {
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "PackageManagement",
+                    "Version": "1.4.7"
+                },
+                {
+                    "Name": "PowerShellGet",
+                    "Version": "2.2.5"
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
         WhenInvokingPxGet
         ThenSucceeded
     }
-}
 
-Describe 'Invoke-PxGet.when no modules are found matching the modules listed in the pxget file' {
-    AfterEach{ Reset }
-    It 'should run but throw an exception' {
-        Init
-        AddModule -Name 'Invalid' -Version '9.9.9'
-        CreatePxGetFile
+    It 'should run but throw an exception when there is an invalid module name' {
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "Invalid",
+                    "Version": "9.9.9"
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
         WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenModuleNotFound -WithError 'No match was found for the specified search criteria and module name'
+        ThenModuleNotFound -WithError "Cannot bind argument to parameter 'Modules' because it is null."
     }
-}
 
-Describe 'Invoke-PxGet.when there is no pxget file' {
-    It 'should fail' {
-        Init
+    It 'should pass when the pxget exists but is empty file is empty' {
+        $contents = @"
+    
+"@
+        GivenPxGetFile -Contents $contents
+        WhenInvokingPxGet -ErrorAction SilentlyContinue
+        ThenSucceeded
+    }
+
+    It 'should pass when there are no modules listed in the pxget file' {
+        $contents = @"
+        {
+            "PSModules": [
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
+        WhenInvokingPxGet -ErrorAction SilentlyContinue
+        ThenSucceeded
+    }
+
+    It 'should fail when there is no pxget file' {
         WhenInvokingPxGet -WithNoPxGetFile -ErrorAction SilentlyContinue
         ThenFailed -WithError 'does not exist'
-    }
-}
-
-Describe 'Invoke-PxGet.when there are no modules listed in pxget file' {
-    AfterEach{ Reset }
-    It 'should fail' {
-        Init
-        CreatePxGetFile
-        WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenFailed -WithError 'The argument is null'
     }
 }

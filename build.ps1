@@ -130,8 +130,6 @@ if( -not (Test-Path -Path $whiskeyModuleRoot -PathType Container) )
     Import-Module -Name $whiskeyModuleRoot -Force
 }
 
-$ErrorActionPreference = 'Continue'
-
 $configPath = Join-Path -Path $PSScriptRoot -ChildPath 'whiskey.yml' 
 if( -not (Test-Path -Path $configPath -PathType 'Leaf') )
 {

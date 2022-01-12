@@ -3,9 +3,9 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
-
 BeforeAll {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
+
     function GivenModuleImported
     {
         # Don't do anything since Initialize-Test.ps1 imports the module.
@@ -68,25 +68,20 @@ BeforeAll {
     }
 }
 
-Describe ('PxGet.help topic') {
-    It 'should have one' {
-        Init
+Describe 'Pxget' {
+    BeforeEach { Init }
+
+    It 'should have help topics' {
         GivenModuleImported
         ThenHelpTopic 'about_PxGet' -Exists
     }
-}
 
-Describe ('PxGet.command verbs') {
     It 'should only use approved verbs' {
-        Init
         GivenModuleImported
         ThenUseApprovedVerbs
     }
-}
 
-Describe ('PxGet.command help topics') {
     It 'should have a help topic for each command' {
-        Init
         GivenModuleImported
         foreach( $cmd in (Get-Command -Module 'PxGet' -CommandType Function,Cmdlet,Filter))
         {

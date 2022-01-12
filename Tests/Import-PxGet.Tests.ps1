@@ -2,9 +2,9 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
-
 BeforeAll {
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
+
     function GivenModuleLoaded
     {
         Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PxGet\PxGet.psd1' -Resolve)
@@ -36,18 +36,16 @@ BeforeAll {
     }
 }
 
-Describe 'Import-PxGet.when module not loaded' {
-    It 'should import the module' {
-        Init
+Describe 'Import-PxGet' {
+    BeforeEach { Init }
+
+    It 'should import the module when it is not loaded' {
         GivenModuleNotLoaded
         WhenImporting
         ThenModuleLoaded
     }
-}
 
-Describe 'Import-PxGet.when module loaded' {
-    It 'should re-import the module' {
-        Init
+    It 'should re-import the module if the module is already loaded' {
         GivenModuleLoaded
         WhenImporting
         ThenModuleLoaded
