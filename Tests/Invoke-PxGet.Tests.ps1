@@ -2,29 +2,25 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-BeforeDiscovery {
-    $testRoot  = $null
-    $moduleList = @()
-    $failed = $false
-    $testNum = 0
-}
+$testRoot  = $null
+$moduleList = @()
+$failed = $false
+$testNum = 0
 
 BeforeAll {
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
 
     function Init
     {
-        $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
-        New-Item -Path $script:testRoot -ItemType 'Directory'
+        $script:testNum = $script:testNum++
+        $script:testRoot = $null
+        $script:moduleList = @()
+        $script:failed = $false
+        $Global:Error.Clear()
 
         # Remove when done testing.
         $DebugPreference = 'Continue'
         Write-Debug "Get-Location: $(Get-Location)"
-        Write-Debug "Test Root: $testRoot)"
-
-        $script:moduleList = @()
-        $script:failed = $false
-        $Global:Error.Clear()
     }
     
     function GivenPxGetFile
@@ -35,6 +31,15 @@ BeforeAll {
         )
 
         New-Item -Path $testRoot  -ItemType 'File' -Name "pxget.json" -Value $Contents
+    }
+
+    function New-TestRoot
+    {
+        $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        New-Item -Path $script:testRoot -ItemType 'Directory'
+        # Remove when done testing.
+        $DebugPreference = 'Continue'
+        Write-Debug "Test Root: $testRoot"
     }
 
     function RemovePxGetFile
@@ -95,7 +100,8 @@ BeforeAll {
 
 Describe 'Invoke-Pxget' {
     BeforeEach { 
-        Init 
+        Init
+        New-TestRoot 
     }
     AfterEach { 
         Reset 
