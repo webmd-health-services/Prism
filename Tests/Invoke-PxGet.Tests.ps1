@@ -7,7 +7,7 @@ BeforeAll {
     $script:moduleList = @()
     $script:failed = $false
     $script:testNum = 0
-    
+
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
 
     function Init
@@ -16,10 +16,6 @@ BeforeAll {
         $script:moduleList = @()
         $script:failed = $false
         $Global:Error.Clear()
-
-        # Remove when done testing.
-        $DebugPreference = 'Continue'
-        Write-Debug "Get-Location: $(Get-Location)"
     }
     
     function GivenPxGetFile
@@ -36,9 +32,6 @@ BeforeAll {
     {
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
         New-Item -Path $script:testRoot -ItemType 'Directory'
-        # Remove when done testing.
-        $DebugPreference = 'Continue'
-        Write-Debug "Test Root: $testRoot"
     }
 
     function RemovePxGetFile
@@ -54,18 +47,7 @@ BeforeAll {
         RemovePxGetFile
     }
 
-    function ThenFailed
-    {
-        param(
-            [Parameter(Mandatory)]
-            [string] $WithError
-        )
-    
-        $script:failed | Should -BeTrue
-        $Global:Error[-1] | Should -Match $WithError
-    }    
-
-    function ThenModuleNotFound
+    function ThenErrorThrown
     {
         param(
             [Parameter(Mandatory)]
@@ -187,7 +169,7 @@ Describe 'Invoke-Pxget' {
 "@
         GivenPxGetFile -Contents $contents
         WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenModuleNotFound -WithError "Cannot bind argument to parameter 'Modules' because it is null."
+        ThenErrorThrown -WithError "No modules were found using the module names from the pxget file!"
     }
 
     It 'should pass when the pxget exists but is empty file is empty' {
@@ -213,6 +195,6 @@ Describe 'Invoke-Pxget' {
 
     It 'should fail when there is no pxget file' {
         WhenInvokingPxGet -WithNoPxGetFile -ErrorAction SilentlyContinue
-        ThenFailed -WithError 'does not exist'
+        ThenErrorThrown -WithError 'does not exist'
     }
 }

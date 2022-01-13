@@ -47,8 +47,9 @@ function Invoke-PxGet
         else 
         {
             Write-Error 'The pxget.json file does not exist!'
+            return
         }
-
+        
         if( $pxModules )
         {
             $moduleNames = $pxModules.PSModules | Select-Object -ExpandProperty 'Name'
@@ -71,6 +72,11 @@ function Invoke-PxGet
                     }
                     else
                     {
+                        if( -not $modules )
+                        {
+                            Write-Error 'No modules were found using the module names from the pxget file!'
+                            continue
+                        }
                         $moduleToInstall = FindModuleFromList -Modules $modules -ModuleToFind $pxModule
                     }
         
