@@ -46,7 +46,7 @@ function Invoke-PxGet
         }
         else 
         {
-            Write-Error 'The pxget.json file does not exist!'
+            Write-Error 'The pxget.json file does not exist!' -ErrorAction SilentlyContinue
             return
         }
         
@@ -74,7 +74,7 @@ function Invoke-PxGet
                     {
                         if( -not $modules )
                         {
-                            Write-Error 'No modules were found using the module names from the pxget file!'
+                            Write-Error 'No modules were found using the module names from the pxget file!' -ErrorAction SilentlyContinue
                             continue
                         }
                         $moduleToInstall = FindModuleFromList -Modules $modules -ModuleToFind $pxModule
