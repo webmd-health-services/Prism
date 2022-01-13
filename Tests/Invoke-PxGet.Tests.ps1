@@ -2,17 +2,16 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-$testRoot  = $null
-$moduleList = @()
-$failed = $false
-$testNum = 0
-
 BeforeAll {
+    $script:testRoot  = $null
+    $script:moduleList = @()
+    $script:failed = $false
+    $script:testNum = 0
+    
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-Test.ps1' -Resolve)
 
     function Init
     {
-        $script:testNum = $script:testNum++
         $script:testRoot = $null
         $script:moduleList = @()
         $script:failed = $false
