@@ -26,7 +26,7 @@ function Invoke-PxGet
     $DebugPreference = 'Continue'
 
     $origModulePath = $env:PSModulePath
-    $psmodulesPath = Join-Path -Path $(Get-RootDirectory) -ChildPath 'PSModules'
+    $psmodulesPath = Join-Path -Path $(Get-Location) -ChildPath 'PSModules'
     if( -not (Test-Path -Path $psmodulesPath) )
     {
         New-Item -Path $psmodulesPath -ItemType 'Directory' | Out-Null
@@ -36,77 +36,84 @@ function Invoke-PxGet
     {
         # pxget should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
         # to pxget module's Modules directory ensures no other package modules get loaded.
-        $env:PSModulePath = Join-Path -Path (Get-Item $($moduleRoot)).Parent.FullName -ChildPath 'PSModules' -Resolve
-        Import-Module -Name 'PackageManagement'
-        Import-Module -Name 'PowerShellGet'
+        $env:PSModulePath = $psmodulesPath
+        $DebugPreference = 'Continue'
+        Write-Debug "PSModules Path: $psmodulesPath"
+        Write-Debug "moduleRoot: $moduleRoot"
+        Import-Module -Name (Join-Path -Path $moduleRoot -ChildPath 'Modules\PackageManagement')
+        Import-Module -Name (Join-Path -Path $moduleRoot -ChildPath 'Modules\PowerShellGet')
+        $modulesNotFound = @()
 
-        if( Test-Path -Path ($(Get-RootDirectory) + '\pxget.json') )
+        if( -not (Test-Path -Path (Join-Path -Path (Get-Location) -ChildPath 'pxget.json')) )
         {
-            $pxModules = Get-Content -Path ($(Get-RootDirectory) + '\pxget.json') | ConvertFrom-Json
+            Write-Error 'There is no pxget.json file in the current directory.'
+            return
         }
-        else 
+
+        $pxModules = Get-Content -Path ($(Get-Location) + '\pxget.json') | ConvertFrom-Json
+        if( -not $pxModules )
         {
-            Write-Error 'The pxget.json file does not exist!' -ErrorAction SilentlyContinue
+            Write-Warning 'The pxget.json file is empty!'
+            return
+        }
+
+        $moduleNames = $pxModules.PSModules | Select-Object -ExpandProperty 'Name'
+        if( -not $moduleNames )
+        {
+            Write-Warning 'There are no modules listed in the pxget.json file!'
             return
         }
         
-        if( $pxModules )
+        $modules = Find-Module -Name $moduleNames -ErrorAction Ignore
+        if( -not $modules )
         {
-            $moduleNames = $pxModules.PSModules | Select-Object -ExpandProperty 'Name'
-            if( $moduleNames )
-            {
-                $modules = Find-Module -Name $moduleNames -ErrorAction Ignore
-
-                # We only care if the module is in PSModules right now. Later we'll allow dev dependencies, which can be
-                # installed globally.
-                $env:PSModulePath = $psModulesPath
-                foreach( $pxModule in $pxModules.PSModules )
-                {
-                    $allowPrerelease = $pxModule.Version.Contains('-')
-                    
-                    if( $allowPrerelease)
-                    {
-                        # Find module again but with AllVersions and AllowPrerelease
-                        $modulesWithPrelease = Find-Module -Name $pxModule.Name -AllowPrerelease -AllVersions
-                        $moduleToInstall = FindModuleFromList -Modules $modulesWithPrelease -ModuleToFind $pxModule -AllowPrerelease
-                    }
-                    else
-                    {
-                        if( -not $modules )
-                        {
-                            Write-Error 'No modules were found using the module names from the pxget file!' -ErrorAction SilentlyContinue
-                            continue
-                        }
-                        $moduleToInstall = FindModuleFromList -Modules $modules -ModuleToFind $pxModule
-                    }
-        
-                    if( -not $moduleToInstall )
-                    {
-                        Write-Error "Module $($pxModule.Name) was not found!"
-                        continue
-                    }
-        
-                    $installedModule =
-                        Get-Module -Name $pxModule.Name -List |
-                        Where-Object 'Version' -eq $moduleToInstall.Version
-                    # The latest version that matches the version in the pxget.json file is already installed
-                    if( $installedModule )
-                    {
-                        continue
-                    }
-        
-                    # Not installed. Install it. We pipe it so the repository of the module is also used.
-                    $moduleToInstall | Save-Module -Path $psmodulesPath
-                }
-            }
-            else 
-            {
-                Write-Warning 'There are no modules listed in the pxget.json file!'
-            }
+            Write-Error 'No modules were found using the module names from the pxget file!'
+            return
         }
-        else 
+
+        # We only care if the module is in PSModules right now. Later we'll allow dev dependencies, which can be
+        # installed globally.
+        $env:PSModulePath = $psModulesPath
+        foreach( $pxModule in $pxModules.PSModules )
         {
-            Write-Warning 'The pxget.json file is empty!'
+            $allowPrerelease = $pxModule.Version.Contains('-')
+            
+            if( $allowPrerelease)
+            {
+                # Find module again but with AllVersions and AllowPrerelease
+                $modulesWithPrelease = Find-Module -Name $pxModule.Name -AllowPrerelease -AllVersions
+                $moduleToInstall = $modulesWithPrelease | Select-Module -Name $pxModule.Name -Version $pxModule.Version -AllowPrerelease | Select-Object -First 1
+            }
+            else
+            {
+                $moduleToInstall = $modules | Select-Module -Name $pxModule.Name -Version $pxModule.Version | Select-Object -First 1
+            }
+
+            if( -not $moduleToInstall )
+            {
+                $modulesNotFound += $pxModule.Name
+                continue
+            }
+
+            $installedModule =
+                Get-Module -Name $pxModule.Name -List |
+                Where-Object 'Version' -eq $moduleToInstall.Version
+            # The latest version that matches the version in the pxget.json file is already installed
+            if( $installedModule )
+            {
+                continue
+            }
+
+            # Not installed. Install it. We pipe it so the repository of the module is also used.
+            $moduleToInstall | Save-Module -Path $psmodulesPath
+            $savedToPath = Join-Path -Path $psmodulesPath -ChildPath $moduleToInstall.Name
+            $savedToPath = Join-Path -Path $savedToPath -ChildPath ($moduleToInstall.Version -replace '-.*$', '')
+            Get-Module -Name $savedToPath -ListAvailable
+        }
+        if( $modulesNotFound )
+        {
+            Write-Error "The following modules were not found: $($modulesNotFound -join ', ')"
+            return
         }
     }
     finally
@@ -116,37 +123,3 @@ function Invoke-PxGet
 }
 
 Set-Alias -Name 'pxget' -Value 'Invoke-PxGet'
-
-function FindModuleFromList
-{
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [pscustomobject[]] $Modules,
-
-        [Parameter(Mandatory)]
-        [pscustomobject] $ModuleToFind,
-
-        [switch] $AllowPrerelease
-    )
-
-    $moduleToInstall =
-        $Modules |
-        Where-Object 'Name' -eq $ModuleToFind.Name |
-        Where-Object 'Version' -like $ModuleToFind.Version |
-        Where-Object {
-            if( $AllowPrerelease )
-            {
-                return $true
-            }
-            return $_.Version -notmatch '-[A-Za-z0-9.-]+(\+[A-Za-z0-9.-]+)?$'
-        } |
-        Select-Object -First 1
-    
-    return $moduleToInstall
-}
-
-function Get-RootDirectory
-{
-    return (Get-Item $($moduleRoot)).Parent.FullName
-}

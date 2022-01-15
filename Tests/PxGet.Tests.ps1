@@ -10,11 +10,6 @@ BeforeAll {
     {
         # Don't do anything since Initialize-Test.ps1 imports the module.
     }
-    
-    function Init
-    {
-    }
-    
     function ThenUseApprovedVerbs
     {
         param(
@@ -69,8 +64,6 @@ BeforeAll {
 }
 
 Describe 'Pxget' {
-    BeforeEach { Init }
-
     It 'should have help topics' {
         GivenModuleImported
         ThenHelpTopic 'about_PxGet' -Exists

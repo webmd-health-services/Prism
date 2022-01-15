@@ -15,12 +15,6 @@ BeforeAll {
     {
         Remove-Module -Name 'PxGet' -Force -ErrorAction Ignore
     }
-
-    function Init
-    {
-
-    }
-
     function ThenModuleLoaded
     {
         $module = Get-Module -Name 'PxGet'
@@ -37,8 +31,6 @@ BeforeAll {
 }
 
 Describe 'Import-PxGet' {
-    BeforeEach { Init }
-
     It 'should import the module when it is not loaded' {
         GivenModuleNotLoaded
         WhenImporting
