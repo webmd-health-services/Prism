@@ -15,12 +15,12 @@ Build:
 - GetPowerShellModule:
     Name: PowerShellGet
     Version: 2.*
-    Path: Pxget\Modules
+    Path: PxGet\Modules
 
 - GetPowerShellModule:
     Name: PackageManagement
     Version: 1.*
-    Path: Pxget\Modules
+    Path: PxGet\Modules
 
 # Dot-sourcing files is expensive. Move all functions into .psm1 file to improve import speed. Do this before testing
 # to ensure the module still works.
