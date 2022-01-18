@@ -52,6 +52,10 @@ BeforeAll {
     
     function WhenInvokingPxGet
     {
+        [CmdletBinding()]
+        param(
+        )
+
         try 
         {
             Mock -CommandName 'Get-Location' -ModuleName 'PxGet' { return $testRoot }
