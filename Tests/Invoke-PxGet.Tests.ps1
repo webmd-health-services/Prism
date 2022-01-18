@@ -205,7 +205,7 @@ Describe 'Invoke-Pxget' {
     }
 
     It 'should fail when there is no pxget file' {
-        WhenInvokingPxGet -WithNoPxGetFile -ErrorAction SilentlyContinue
+        WhenInvokingPxGet -ErrorAction SilentlyContinue
         ThenErrorThrown -WithError 'There is no pxget.json file in the current directory.'
     }
 }

@@ -38,9 +38,13 @@ function Invoke-PxGet
         # to pxget module's Modules directory ensures no other package modules get loaded.
         $env:PSModulePath = $psmodulesPath
         $DebugPreference = 'Continue'
-        Write-Debug "PSModules Path: $psmodulesPath"
         Write-Debug "moduleRoot: $moduleRoot"
         Get-ChildItem -Path $moduleRoot -Recurse | Out-String | Write-Debug
+
+        $moduleRootParent = (Get-Item $($moduleRoot)).Parent.FullName
+        Write-Debug "moduleRootParent: $moduleRootParent"
+        Get-ChildItem -Path $moduleRootParent -Recurse | Out-String | Write-Debug
+
         Import-Module -Name (Join-Path -Path $moduleRoot -ChildPath 'Modules\PackageManagement')
         Import-Module -Name (Join-Path -Path $moduleRoot -ChildPath 'Modules\PowerShellGet')
         $modulesNotFound = @()
