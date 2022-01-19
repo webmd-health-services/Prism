@@ -86,6 +86,11 @@ function Invoke-PxGet
             else
             {
                 $moduleToInstall = $modules | Select-Module -Name $pxModule.Name -Version $pxModule.Version | Select-Object -First 1
+                if( -not $moduleToInstall )
+                {
+                    $moduleWithAllVersions = Find-Module -Name $pxModule.Name -AllVersions -ErrorAction Ignore
+                    $moduleToInstall = $moduleWithAllVersions | Select-Module -Name $pxModule.name -Version $pxModule.Version | Select-Object -First 1
+                }
             }
 
             if( -not $moduleToInstall )

@@ -105,23 +105,6 @@ Describe 'Invoke-Pxget' {
         ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
     }
 
-    It 'should pass when the module to be installed already exists' {
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0"
-                }
-            ]
-        }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
-    }
-
     It 'should pass when different versions of the same module are installed' {
         $contents = @"
         {
