@@ -20,14 +20,14 @@ BeforeAll {
         New-Item -Path $testRoot  -ItemType 'File' -Name "pxget.json" -Value $Contents
     }
 
-    function ThenErrorThrown
+    function ThenError
     {
         param(
             [Parameter(Mandatory)]
-            [string] $WithError
+            [string] $Matches
         )
     
-        $Global:Error[-1] | Should -Match $WithError
+        $Global:Error[-1] | Should -Match $Matches
     }
 
     function ThenInstalled
@@ -37,10 +37,19 @@ BeforeAll {
             [string] $ModuleName,
 
             [Parameter(Mandatory)]
-            [string] $Version
+            [string] $Version,
+
+            [string] $InstallPath
         )
 
-        Test-ModuleManifest -Path "$testRoot\PSModules\$ModuleName\$Version\$ModuleName.psd1" | Should -BeTrue    
+        if( $InstallPath )
+        {
+            Test-ModuleManifest -Path "$InstallPath\$ModuleName\$Version\$ModuleName.psd1" | Should -BeTrue
+        }
+        else 
+        {
+            Test-ModuleManifest -Path "$testRoot\PSModules\$ModuleName\$Version\$ModuleName.psd1" | Should -BeTrue
+        }
     }
     
     function ThenSucceeded
@@ -78,12 +87,6 @@ Describe 'Invoke-Pxget' {
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
         New-Item -Path $script:testRoot -ItemType 'Directory'
     }
-    AfterEach { 
-        if( Test-Path -Path "$testRoot \pxget.json" )
-        {
-            Remove-Item -Path "$testRoot \pxget.json"
-        }
-    }
 
     It 'should pass when there is a valid module in the pxget file' {
         $contents = @"
@@ -117,6 +120,48 @@ Describe 'Invoke-Pxget' {
         WhenInvokingPxGet
         ThenSucceeded
         ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
+    }
+
+    It 'should pass when different versions of the same module are installed' {
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0"
+                },
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.1"
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
+        WhenInvokingPxGet
+        ThenSucceeded
+        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
+        ThenInstalled -ModuleName 'NoOp' -Version '1.0.1'
+    }
+
+    It 'should pass when given an install path' {
+        New-Item -Path $(Join-Path -Path $testRoot -ChildPath 'TestPath') -ItemType 'Directory'
+        $testPath = (Join-Path -Path $testRoot -ChildPath 'TestPath').replace('\', '\\')
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0",
+                    "Path": "$($testPath)"
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
+        WhenInvokingPxGet
+        ThenSucceeded
+        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0' -InstallPath $testPath
     }
 
     It 'should pass when the module to be installed is a prerelease version' {
@@ -158,7 +203,7 @@ Describe 'Invoke-Pxget' {
         ThenInstalled -ModuleName 'Carbon' -Version '2.11.0'
     }
 
-    It 'should run but throw an error when there are an invalid module name' {
+    It 'should run but write an error when there is an invalid module name' {
         $contents = @"
         {
             "PSModules": [
@@ -179,11 +224,11 @@ Describe 'Invoke-Pxget' {
 "@
         GivenPxGetFile -Contents $contents
         WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenErrorThrown -WithError 'The following modules were not found: Invalid, Invalid2'
+        ThenError -Matches ([regex]::Escape('Module(s) "Invalid", "Invalid2" not found.'))
         ThenInstalled -ModuleName 'ProGetAutomation' -Version '1.0.0'
     }
 
-    It 'should pass when the pxget exists but is file is empty' {
+    It 'should pass when the pxget file is empty' {
         $contents = @"
     
 "@
@@ -206,6 +251,6 @@ Describe 'Invoke-Pxget' {
 
     It 'should fail when there is no pxget file' {
         WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenErrorThrown -WithError 'There is no pxget.json file in the current directory.'
+        ThenError -Matches 'There is no pxget.json file in the current directory.'
     }
 }

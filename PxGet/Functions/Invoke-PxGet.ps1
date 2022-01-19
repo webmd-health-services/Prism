@@ -6,7 +6,8 @@ function Invoke-PxGet
     
     .DESCRIPTION
     A tool similar to nuget but for PowerShell modules. A config file in the root of a repository that specifies 
-    what modules should be installed into the PSModules directory of the repository. 
+    what modules should be installed into the PSModules directory of the repository. If a path is provided for the
+    module it will be installed at the specified path instead of the PSModules directory.
 
     .EXAMPLE
     Invoke-PxGet 'install'
@@ -40,14 +41,15 @@ function Invoke-PxGet
         Import-Module -Name (Join-Path -Path $moduleRoot -ChildPath 'Modules\PackageManagement')
         Import-Module -Name (Join-Path -Path $moduleRoot -ChildPath 'Modules\PowerShellGet')
         $modulesNotFound = @()
+        $pxgetJsonPath = Join-Path -Path (Get-Location) -ChildPath 'pxget.json'
 
-        if( -not (Test-Path -Path (Join-Path -Path (Get-Location) -ChildPath 'pxget.json')) )
+        if( -not (Test-Path -Path $pxgetJsonPath) )
         {
             Write-Error 'There is no pxget.json file in the current directory.'
             return
         }
 
-        $pxModules = Get-Content -Path ($(Get-Location) + '\pxget.json') | ConvertFrom-Json
+        $pxModules = Get-Content -Path $pxgetJsonPath | ConvertFrom-Json
         if( -not $pxModules )
         {
             Write-Warning 'The pxget.json file is empty!'
@@ -57,14 +59,14 @@ function Invoke-PxGet
         $moduleNames = $pxModules.PSModules | Select-Object -ExpandProperty 'Name'
         if( -not $moduleNames )
         {
-            Write-Warning 'There are no modules listed in the pxget.json file!'
+            Write-Warning "There are no modules listed in ""$($pxgetJsonPath | Resolve-Path -Relative)""."
             return
         }
         
         $modules = Find-Module -Name $moduleNames -ErrorAction Ignore
         if( -not $modules )
         {
-            Write-Error 'No modules were found using the module names from the pxget file!'
+            Write-Error "$($pxgetJsonPath | Resolve-Path -Relative): Modules ""$($moduleNames -join '", "')"" not found."
             return
         }
 
@@ -101,15 +103,21 @@ function Invoke-PxGet
                 continue
             }
 
+            $installPath = $psmodulesPath
+            if( $pxModule.PSObject.Properties.Name -Contains 'Path' )
+            {
+                $installPath = $pxModule.Path
+            }
+
             # Not installed. Install it. We pipe it so the repository of the module is also used.
-            $moduleToInstall | Save-Module -Path $psmodulesPath
-            $savedToPath = Join-Path -Path $psmodulesPath -ChildPath $moduleToInstall.Name
+            $moduleToInstall | Save-Module -Path $installPath
+            $savedToPath = Join-Path -Path $installPath -ChildPath $moduleToInstall.Name
             $savedToPath = Join-Path -Path $savedToPath -ChildPath ($moduleToInstall.Version -replace '-.*$', '')
             Get-Module -Name $savedToPath -ListAvailable
         }
         if( $modulesNotFound )
         {
-            Write-Error "The following modules were not found: $($modulesNotFound -join ', ')"
+            Write-Error "$($pxgetJsonPath | Resolve-Path -Relative): Module(s) ""$($modulesNotFound -join '", "')"" not found."
             return
         }
     }
