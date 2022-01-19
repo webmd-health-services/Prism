@@ -110,12 +110,12 @@ Describe 'Invoke-Pxget' {
         {
             "PSModules": [
                 {
-                    "Name": "NoOp",
-                    "Version": "1.0.0"
+                    "Name": "Carbon",
+                    "Version": "2.11.0"
                 },
                 {
-                    "Name": "NoOp",
-                    "Version": "1.0.1"
+                    "Name": "Carbon",
+                    "Version": "2.10.0"
                 }
             ]
         }
@@ -123,8 +123,8 @@ Describe 'Invoke-Pxget' {
         GivenPxGetFile -Contents $contents
         WhenInvokingPxGet
         ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.1'
+        ThenInstalled -ModuleName 'Carbon' -Version '2.11.0'
+        ThenInstalled -ModuleName 'Carbon' -Version '2.10.0'
     }
 
     It 'should pass when given an install path' {
