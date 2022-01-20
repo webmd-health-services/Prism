@@ -109,9 +109,14 @@ function Invoke-PxGet
             }
 
             $installPath = $psmodulesPath
-            if( $pxModule.PSObject.Properties.Name -Contains 'Path' )
+            if( ($pxModule.PSObject.Properties.Name -Contains 'Path') -and (-not [string]::IsNullOrWhiteSpace($pxModule.Path)) )
             {
                 $installPath = $pxModule.Path
+            }
+
+            if( -not (Test-Path -Path $installPath) )
+            {
+                New-Item -Path $installPath -ItemType 'Directory' | Out-Null
             }
 
             # Not installed. Install it. We pipe it so the repository of the module is also used.

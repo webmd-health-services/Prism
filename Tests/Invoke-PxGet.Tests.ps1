@@ -42,14 +42,33 @@ BeforeAll {
             [string] $InstallPath
         )
 
-        if( $InstallPath )
+        $prerelease = ''
+        if( $Version -match '^(.*)-(.*)$' )
         {
-            Test-ModuleManifest -Path "$InstallPath\$ModuleName\$Version\$ModuleName.psd1" | Should -BeTrue
+            $Version = $Matches[1]
+            $prerelease = $Matches[2]
         }
-        else 
+
+        if( -not $InstallPath )
         {
-            Test-ModuleManifest -Path "$testRoot\PSModules\$ModuleName\$Version\$ModuleName.psd1" | Should -BeTrue
+            $InstallPath = Join-Path -Path $testRoot -ChildPath 'PSModules'
         }
+
+        $manifestPath = Join-Path -Path $InstallPath -ChildPath $ModuleName
+        $manifestPath = Join-Path -Path $manifestPath -ChildPath $Version
+        $manifestPath = Join-Path -Path $manifestPath -ChildPath "$ModuleName.psd1"
+        $manifestPath | Should -Exist
+        $manifest = Test-ModuleManifest -Path $manifestPath
+        # For PowerShell 5.1
+        if( -not ($manifest | Get-Member -Name 'Prerelease') )
+        {
+            $manifest | Add-Member -Name 'Prerelease' -MemberType ScriptProperty -Value { $this.PrivateData['PSData']['Prerelease'] }
+        }
+
+        $manifest | Should -Not -BeNullOREmpty
+        $manifest.Name | Should -Be $ModuleName
+        $manifest.Version | Should -Be $Version
+        $manifest.Prerelease | Should -Be $prerelease
     }
     
     function ThenSucceeded
@@ -127,16 +146,16 @@ Describe 'Invoke-Pxget' {
         ThenInstalled -ModuleName 'Carbon' -Version '2.10.0'
     }
 
-    It 'should pass when given an install path' {
-        New-Item -Path $(Join-Path -Path $testRoot -ChildPath 'TestPath') -ItemType 'Directory'
-        $testPath = (Join-Path -Path $testRoot -ChildPath 'TestPath').replace('\', '\\')
+    It 'should pass when given an install path that exists' {
+        $testPath = Join-Path -Path $testRoot -ChildPath 'TestPath'
+        New-Item -Path $testPath -ItemType 'Directory'
         $contents = @"
         {
             "PSModules": [
                 {
                     "Name": "NoOp",
                     "Version": "1.0.0",
-                    "Path": "$($testPath)"
+                    "Path": $($testPath | ConvertTo-Json)
                 }
             ]
         }
@@ -145,6 +164,43 @@ Describe 'Invoke-Pxget' {
         WhenInvokingPxGet
         ThenSucceeded
         ThenInstalled -ModuleName 'NoOp' -Version '1.0.0' -InstallPath $testPath
+    }
+
+    It 'should pass when given an install path that does not exist' {
+        $testPath = Join-Path -Path $testRoot -ChildPath 'NewPath'
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0",
+                    "Path": $($testPath | ConvertTo-Json)
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
+        WhenInvokingPxGet
+        ThenSucceeded
+        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0' -InstallPath $testPath
+    }
+
+    It 'should pass and install to PSModules directory if path is null or empty' {
+        $contents = @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0",
+                    "Path": ""
+                }
+            ]
+        }
+"@
+        GivenPxGetFile -Contents $contents
+        WhenInvokingPxGet
+        ThenSucceeded
+        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
     }
 
     It 'should pass when the module to be installed is a prerelease version' {
@@ -161,7 +217,7 @@ Describe 'Invoke-Pxget' {
         GivenPxGetFile -Contents $contents
         WhenInvokingPxGet
         ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
+        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0-alpha26'
     }
 
     It 'should pass when there are multiple modules to be installed' {
