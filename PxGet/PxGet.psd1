@@ -18,7 +18,7 @@
     RootModule = 'PxGet.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.0.0'
+    ModuleVersion = '0.1.0'
 
     # ID used to uniquely identify this module
     GUID = ''
@@ -36,7 +36,7 @@
     Copyright = '(c) WebMD Health Services.'
 
     # Description of the functionality provided by this module
-    Description = ''
+    Description = 'A tool that is used to install required PowerShell modules into a targeted repository.'
 
     # Minimum version of the Windows PowerShell engine required by this module
     PowerShellVersion = '5.1'
@@ -76,6 +76,7 @@
 
     # Functions to export from this module. Only list public function here.
     FunctionsToExport = @(
+        'Invoke-PxGet'
     )
 
     # Cmdlets to export from this module. By default, you get a script module, so there are no cmdlets.
@@ -85,7 +86,9 @@
     VariablesToExport = @()
 
     # Aliases to export from this module. Don't create/export aliases. It can pollute your user's sessions.
-    AliasesToExport = @()
+    AliasesToExport = @(
+        'pxget'
+    )
 
     # DSC resources to export from this module
     # DscResourcesToExport = @()
