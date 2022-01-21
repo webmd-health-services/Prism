@@ -1,5 +1,5 @@
 # 0.1.1
 
-## Added
+## Fixed
 
-* Added a GUID to the module manifest `PxGet.psd1` file.
+* Module fails to publish to PowerShell Gallery. 
