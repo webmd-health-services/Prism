@@ -18,10 +18,10 @@
     RootModule = 'PxGet.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.1.0'
+    ModuleVersion = '0.1.1'
 
     # ID used to uniquely identify this module
-    GUID = ''
+    GUID = '5b244346-40c9-4a50-a098-8758c19f7f25'
 
     # Author of this module
     Author = 'WebMD Health Services'
