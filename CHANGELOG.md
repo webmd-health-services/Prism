@@ -1,3 +1,8 @@
+# 0.1.3
+
+* Improvements to documentation.
+
+
 # 0.1.2
 
 * Fixed: no progress shown to the user about what `pxget install` is doing.

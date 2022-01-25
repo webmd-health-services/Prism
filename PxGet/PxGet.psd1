@@ -18,7 +18,7 @@
     RootModule = 'PxGet.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.1.2'
+    ModuleVersion = '0.1.3'
 
     # ID used to uniquely identify this module
     GUID = '5b244346-40c9-4a50-a098-8758c19f7f25'
@@ -36,7 +36,17 @@
     Copyright = '(c) WebMD Health Services.'
 
     # Description of the functionality provided by this module
-    Description = 'A tool that is used to install required PowerShell modules into a targeted repository.'
+    Description = @'
+PxGet is a PowerShell module manager inspired by NuGet. Run `pxget install` in a source code repository, and PxGet will
+save private modules into a "PSModules" directory in that repository. PxGet let's you:
+
+* Package and deploy modules side-by-side with the app or tool that uses them without needing to install
+modules globally ahead of time.
+* Not worry about what modules are or aren't installed. Scripts can import and use modules from the "PSModules"
+directory in the script's source code repository.
+* Avoid comitting modules to the source code repository. Team members and build processes run `pxget install` to
+get modules installed.
+'@
 
     # Minimum version of the Windows PowerShell engine required by this module
     PowerShellVersion = '5.1'
