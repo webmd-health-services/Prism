@@ -9,6 +9,10 @@ BeforeAll {
     $script:moduleList = @()
     $script:failed = $false
     $script:testNum = 0
+    $script:origProgressPref = $Global:ProgressPreference
+    $script:origVerbosePref = $Global:VerbosePreference
+    $script:origDebugPref = $Global:DebugPreference
+    $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
 
     function GivenPxGetFile
     {
@@ -97,6 +101,10 @@ BeforeAll {
     }
 }
 
+AfterAll {
+    $Global:ProgressPreference = $script:origProgressPref
+}
+
 Describe 'Invoke-Pxget' {
     BeforeEach { 
         $script:testRoot = $null
@@ -105,6 +113,12 @@ Describe 'Invoke-Pxget' {
         $Global:Error.Clear()
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
         New-Item -Path $script:testRoot -ItemType 'Directory'
+    }
+
+    AfterEach {
+        $Global:DebugPreference = $script:origDebugPref
+        $Global:VerbosePreference = $script:origVerbosePref
+        Remove-Item -Path 'env:PXGET_*' -ErrorAction Ignore
     }
 
     It 'should pass when there is a valid module in the pxget file' {
@@ -291,5 +305,60 @@ Describe 'Invoke-Pxget' {
     It 'should fail when there is no pxget file' {
         WhenInvokingPxGet -ErrorAction SilentlyContinue
         ThenError -Matches 'There is no pxget.json file in the current directory.'
+    }
+
+    It 'should turn off verbose output in package management modules' {
+        GivenPxGetFile @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0"
+                }
+            ]
+        }
+"@
+        $env:PXGET_DISABLE_DEEP_VERBOSE = 'True'
+        $Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
+        $output = WhenInvokingPxGet 4>&1
+        # From Import-Module.
+        $output |
+            Where-Object { $_ -like 'Loading module from path ''*PackageManagement.psd1''.' } |
+            Should -BeNullOrEmpty
+        $output |
+            Where-Object { $_ -like 'Loading module from path ''*PowerShellGet.psd1''.' } |
+            Should -BeNullOrEmpty
+        # From PackageManagement.
+        $output |
+            Where-Object { $_ -like 'Using the provider ''PowerShellGet'' for searching packages.' } |
+            Should -BeNullOrEmpty
+        # From PowerShellGet.
+        $output |
+            Where-Object { $_ -like 'Module ''NoOp'' was saved successfully to path ''*''.' } |
+            Should -BeNullOrEmpty
+    }
+
+
+    It 'should turn off debug output in package management modules' {
+        GivenPxGetFile @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0"
+                }
+            ]
+        }
+"@
+        $env:PXGET_DISABLE_DEEP_DEBUG = 'True'
+        $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
+        $output = WhenInvokingPxGet 5>&1
+
+        # Import-Module doesn't output any debug messages.
+        # Save-Module does.
+        # From PowerShellGet. Can't find PackageManagement-only debug messages.
+        $output |
+            Where-Object { $_ -like '*PackagePRovider::FindPackage with name NoOp' } |
+            Should -BeNullOrEmpty
     }
 }

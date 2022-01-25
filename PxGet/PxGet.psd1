@@ -18,7 +18,7 @@
     RootModule = 'PxGet.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.1.1'
+    ModuleVersion = '0.1.2'
 
     # ID used to uniquely identify this module
     GUID = '5b244346-40c9-4a50-a098-8758c19f7f25'
@@ -119,8 +119,7 @@
             Prerelease = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = @'
-'@
+            ReleaseNotes = 'https://github.com/webmd-health-services/PxGet/blob/main/CHANGELOG.md'
         } # End of PSData hashtable
 
     } # End of PrivateData hashtable
