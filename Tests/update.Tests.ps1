@@ -10,13 +10,13 @@ BeforeAll {
     $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
     $script:psgalleryLocation = Get-PSRepository -Name 'PSGallery' | Select-Object -ExpandProperty 'SourceLocation'
 
-    function GivenPxGetFile
+    function GivenPrismFile
     {
         param(
             [Parameter(Mandatory, Position=0)]
             [string] $Contents,
 
-            [String] $At = 'pxget.json'
+            [String] $At = 'prism.json'
         )
 
         $directory = $At | Split-Path -Parent
@@ -38,7 +38,7 @@ BeforeAll {
             [String] $In = $script:testRoot
         )
 
-        $path = Join-Path -Path $In -ChildPath 'pxget.lock.json'
+        $path = Join-Path -Path $In -ChildPath 'prism.lock.json'
         $path | Should -Exist
         # ConvertTo-Json behaves differently across platforms and versions.
         Get-Content -Raw -Path $path | Should -Be ($ExpectedConfiguration | ConvertTo-Json)
@@ -56,12 +56,12 @@ BeforeAll {
         {
             $optionalParams['Recurse'] = $true
         }
-        $result = Invoke-PxGet -Command 'update' @optionalParams
+        $result = Invoke-Prism -Command 'update' @optionalParams
         $result | Out-String | Write-Verbose -Verbose
     }
 }
 
-Describe 'pxget update' {
+Describe 'prism update' {
     BeforeEach { 
         $script:testRoot = $null
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
@@ -75,7 +75,7 @@ Describe 'pxget update' {
     }
 
     It 'should resolve exact versions' {
-        GivenPxGetFile @'
+        GivenPrismFile @'
 {
     "PSModules": [
         { "Name": "Carbon", "Version": "2.11.1" },
@@ -101,7 +101,7 @@ Describe 'pxget update' {
     }
 
     It 'should resolve latest version by default' {
-        GivenPxGetFile @'
+        GivenPrismFile @'
     {
         "PSModules": [ { "Name": "NoOp" }]
     }
@@ -119,7 +119,7 @@ Describe 'pxget update' {
     }
 
     It 'should resolve wildcards' {
-        GivenPxGetFile @'
+        GivenPrismFile @'
 {
     "PSModules": [
         { "Name": "NoOp", "Version": "1.*" }
@@ -141,7 +141,7 @@ Describe 'pxget update' {
     }
 
     It 'should automatically allow prerelease versions' {
-        GivenPxGetFile @'
+        GivenPrismFile @'
 {
     "PSModules": [
         { "Name": "Carbon", "Version": "2.*-*" }
@@ -161,7 +161,7 @@ Describe 'pxget update' {
     }
 
     It 'should allow user to enable prerelease versions' {
-        GivenPxGetFile @'
+        GivenPrismFile @'
 {
     "PSModules": [
         { "Name": "Carbon", "Version": "*alpha732", "AllowPrerelease": true }
@@ -181,14 +181,14 @@ Describe 'pxget update' {
     }
 
     It 'should lock recursively' {
-        GivenPxGetFile -At 'dir1\pxget.json' @'
+        GivenPrismFile -At 'dir1\prism.json' @'
 {
     "PSModules": [
         { "Name": "NoOp" }
     ]
 }
 '@
-        GivenPxGetFile -At 'dir1\dir2\pxget.json' @'
+        GivenPrismFile -At 'dir1\dir2\prism.json' @'
 {
     "PSModules": [
         { "Name": "NoOp" }
@@ -210,14 +210,14 @@ Describe 'pxget update' {
     }
 
     It 'should clobber existing lock file' {
-        GivenPxGetFile @'
+        GivenPrismFile @'
     {
         "PSModules": [ { "Name": "NoOp" }]
     }
 '@
-        'clobberme' | Set-Content -Path 'pxget.lock.json'
+        'clobberme' | Set-Content -Path 'prism.lock.json'
         WhenLocking
-        Get-Content -Path 'pxget.lock.json' -Raw | Should -Not -Match 'clobberme'
+        Get-Content -Path 'prism.lock.json' -Raw | Should -Not -Match 'clobberme'
         ThenLockFileIs ([pscustomobject]@{
             PSModules = @(
                 [pscustomobject]@{

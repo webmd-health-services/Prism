@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-Gets your computer ready to develop the PxGet module.
+Gets your computer ready to develop the Prism module.
 
 .DESCRIPTION
 The init.ps1 script makes the configuraion changes necessary to get your computer ready to develop for the
-PxGet module. It:
+Prism module. It:
 
 
 .EXAMPLE

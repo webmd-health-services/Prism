@@ -1,8 +1,8 @@
-function Invoke-PxGet
+function Invoke-Prism
 {
     <#
     .SYNOPSIS
-    Invokes PxGet.
+    Invokes Prism.
 
     .DESCRIPTION
     A tool similar to nuget but for PowerShell modules. A config file in the root of a repository that specifies
@@ -10,7 +10,7 @@ function Invoke-PxGet
     module it will be installed at the specified path instead of the PSModules directory.
 
     .EXAMPLE
-    Invoke-PxGet 'install'
+    Invoke-Prism 'install'
 
     Demonstrates how to call this function to install required PSModules.
     #>
@@ -21,8 +21,8 @@ function Invoke-PxGet
         [ValidateSet('install', 'update')]
         [String] $Command,
 
-        # The name of the PxGet configuration file to use. Defaults to `pxget.json`.
-        [String] $FileName = 'pxget.json',
+        # The name of the Prism configuration file to use. Defaults to `prism.json`.
+        [String] $FileName = 'prism.json',
 
         [switch] $Recurse
     )
@@ -35,8 +35,8 @@ function Invoke-PxGet
     $pkgMgmtPrefs = Get-PackageManagementPreference
     try
     {
-        # pxget should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
-        # to pxget module's Modules directory ensures no other package modules get loaded.
+        # prism should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
+        # to prism module's Modules directory ensures no other package modules get loaded.
         $pkgManagementModulePath = Join-Path -Path $moduleRoot -ChildPath 'Modules'
         $env:PSModulePath = $pkgManagementModulePath
         Write-Debug 'AVAILABLE MODULES'
@@ -51,8 +51,8 @@ function Invoke-PxGet
         Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
 
         $Force = $FileName.StartsWith('.')
-        $pxgetJsonFiles = Get-ChildItem -Path '.' -Filter $FileName -Recurse:$Recurse -Force:$Force -ErrorAction Ignore
-        if( -not $pxgetJsonFiles )
+        $prismJsonFiles = Get-ChildItem -Path '.' -Filter $FileName -Recurse:$Recurse -Force:$Force -ErrorAction Ignore
+        if( -not $prismJsonFiles )
         {
             $msg = ''
             $suffix = ''
@@ -67,9 +67,9 @@ function Invoke-PxGet
             return
         }
 
-        foreach( $pxgetJsonFile in $pxgetJsonFiles )
+        foreach( $prismJsonFile in $prismJsonFiles )
         {
-            $path = $pxgetJsonFile.FullName
+            $path = $prismJsonFile.FullName
             $config = Get-Content -Path $path | ConvertFrom-Json
             if( -not $config )
             {
@@ -79,7 +79,7 @@ function Invoke-PxGet
 
             $lockBaseName = [IO.Path]::GetFileNameWithoutExtension($path)
             $lockExtension = [IO.Path]::GetExtension($path)
-            # Hidden file with no extension, e.g. `.pxget`
+            # Hidden file with no extension, e.g. `.prism`
             if( -not $lockBaseName -and $lockExtension )
             {
                 $lockBaseName = $lockExtension
@@ -90,7 +90,7 @@ function Invoke-PxGet
             # private members that users aren't allowed to customize.
             $config |
                 Add-Member -Name 'Path' -MemberType NoteProperty -Value $path -PassThru -Force |
-                Add-Member -Name 'File' -MemberType NoteProperty -Value $pxgetJsonFile -PassThru -Force |
+                Add-Member -Name 'File' -MemberType NoteProperty -Value $prismJsonFile -PassThru -Force |
                 Add-Member -Name 'LockPath' -MemberType NoteProperty -Value $lockPath -PassThru -Force |
                 Out-Null
 
@@ -101,7 +101,7 @@ function Invoke-PxGet
             $config | Add-Member -Name 'PSModulesDirectoryName' -MemberType NoteProperty -Value 'PSModules' @ignore
 
             # This makes it so we can use PowerShell's module cmdlets as much as possible.
-            $privateModulePath =  Join-Path -Path $pxgetJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
+            $privateModulePath =  Join-Path -Path $prismJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
             $env:PSModulePath = "$($privateModulePath)$([IO.Path]::PathSeparator)$($pkgManagementModulePath)"
 
             switch( $Command )
@@ -123,4 +123,4 @@ function Invoke-PxGet
     }
 }
 
-Set-Alias -Name 'pxget' -Value 'Invoke-PxGet'
+Set-Alias -Name 'prism' -Value 'Invoke-Prism'

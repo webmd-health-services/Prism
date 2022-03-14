@@ -14,16 +14,16 @@
 
 <#
 .SYNOPSIS
-Imports the PxGet module into the current session.
+Imports the Prism module into the current session.
 
 .DESCRIPTION
-The `Import-PxGet.ps1` script imports the PxGet module into the current session. If the module is already
+The `Import-Prism.ps1` script imports the Prism module into the current session. If the module is already
 loaded, it is removed, then reloaded.
 
 .EXAMPLE
-.\Import-PxGet.ps1
+.\Import-Prism.ps1
 
-Demonstrates how to use this script to import the PxGet module  into the current PowerShell session.
+Demonstrates how to use this script to import the Prism module  into the current PowerShell session.
 #>
 [CmdletBinding()]
 param(
@@ -40,12 +40,12 @@ $Global:WhatIfPreference = $WhatIfPreference = $false
 
 try
 {
-    if( (Get-Module -Name 'PxGet') )
+    if( (Get-Module -Name 'Prism') )
     {
-        Remove-Module -Name 'PxGet' -Force
+        Remove-Module -Name 'Prism' -Force
     }
 
-    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'PxGet.psd1' -Resolve)
+    Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'Prism.psd1' -Resolve)
 }
 finally
 {

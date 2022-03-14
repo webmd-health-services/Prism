@@ -5,8 +5,8 @@ Pass the name of the module to the `ModuleName` parameter. The script will:
 
 * Rename this file to TODO.md (there are additional steps to take afterward)
 * Puts the default README.md file in place.
-* Rename every file that has `PxGet` in its name, replacing `PxGet` with the module name.
-* Replaces `PxGet` in every file with the module name.
+* Rename every file that has `Prism` in its name, replacing `Prism` with the module name.
+* Replaces `Prism` in every file with the module name.
 * Installs and enables [Whiskey](https://github.com/webmd-health-services/Whiskey/wiki).
 * Removes this script.
 * If Git is installed, adds all the changes, and amends the initial commit with them so all traces of the template are

@@ -1,0 +1,8 @@
+TOPIC
+    about_Prism
+
+SHORT DESCRIPTION
+    Prism is a PowerShell module for...
+
+LONG DESCRIPTION
+    The Prism PowerShell module...

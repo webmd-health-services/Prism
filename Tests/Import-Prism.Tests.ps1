@@ -7,17 +7,17 @@ BeforeAll {
 
     function GivenModuleLoaded
     {
-        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PxGet\PxGet.psd1' -Resolve)
-        Get-Module -Name 'PxGet' | Add-Member -MemberType NoteProperty -Name 'NotReloaded' -Value $true
+        Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\Prism.psd1' -Resolve)
+        Get-Module -Name 'Prism' | Add-Member -MemberType NoteProperty -Name 'NotReloaded' -Value $true
     }
 
     function GivenModuleNotLoaded
     {
-        Remove-Module -Name 'PxGet' -Force -ErrorAction Ignore
+        Remove-Module -Name 'Prism' -Force -ErrorAction Ignore
     }
     function ThenModuleLoaded
     {
-        $module = Get-Module -Name 'PxGet'
+        $module = Get-Module -Name 'Prism'
         $module | Should -Not -BeNullOrEmpty
         $module | Get-Member -Name 'NotReloaded' | Should -BeNullOrEmpty
     }
@@ -26,11 +26,11 @@ BeforeAll {
     {
         $script:importedAt = Get-Date
         Start-Sleep -Milliseconds 1
-        & (Join-Path -Path $PSScriptRoot -ChildPath '..\PxGet\Import-PxGet.ps1' -Resolve)
+        & (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\Import-Prism.ps1' -Resolve)
     }
 }
 
-Describe 'Import-PxGet' {
+Describe 'Import-Prism' {
     It 'should import the module when it is not loaded' {
         GivenModuleNotLoaded
         WhenImporting

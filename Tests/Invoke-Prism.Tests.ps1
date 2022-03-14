@@ -14,10 +14,10 @@ BeforeAll {
     $script:origDebugPref = $Global:DebugPreference
     $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
 
-    function GivenPxGetFile
+    function GivenPrismFile
     {
         param(
-            [String] $Named = 'pxget.json',
+            [String] $Named = 'prism.json',
 
             [String] $WithContent = '{}'
         )
@@ -59,7 +59,7 @@ BeforeAll {
             update = 'Update-ModuleLock';
         })[$Named]
 
-        Assert-MockCalled -CommandName $cmdName -ModuleName 'PxGet' -Times $Passing.Length -Exactly
+        Assert-MockCalled -CommandName $cmdName -ModuleName 'Prism' -Times $Passing.Length -Exactly
 
         foreach( $config in $Passing )
         {
@@ -75,11 +75,11 @@ BeforeAll {
 
             if( -not $config['LockPath'] )
             {
-                $config['LockPath'] = 'pxget.lock.json'
+                $config['LockPath'] = 'prism.lock.json'
             }
 
             Write-Debug "$($config['Path'])"
-            Assert-MockCalled -CommandName $cmdName -ModuleName 'PxGet' -Times 1 -Exactly -ParameterFilter {
+            Assert-MockCalled -CommandName $cmdName -ModuleName 'Prism' -Times 1 -Exactly -ParameterFilter {
                 $expectedPath = Join-Path -Path $script:testRoot -ChildPath $config['Path']
                 Write-Debug "  Path      expected  $($expectedPath)"
                 Write-Debug "            actual    $($Configuration.Path)"
@@ -140,12 +140,12 @@ BeforeAll {
             [hashtable] $WithParameters = @{}
         )
 
-        Mock -CommandName 'Install-PrivateModule' -ModuleName 'PxGet'
-        Mock -CommandName 'Update-ModuleLock' -ModuleName 'PxGet'
+        Mock -CommandName 'Install-PrivateModule' -ModuleName 'Prism'
+        Mock -CommandName 'Update-ModuleLock' -ModuleName 'Prism'
 
         try 
         {
-            Invoke-PxGet -Command $Named @WithParameters
+            Invoke-Prism -Command $Named @WithParameters
         }
         catch
         {
@@ -159,7 +159,7 @@ AfterAll {
     $Global:ProgressPreference = $script:origProgressPref
 }
 
-Describe 'Invoke-Pxget' {
+Describe 'Invoke-Prism' {
     BeforeEach { 
         $script:testRoot = $null
         $script:moduleList = @()
@@ -175,7 +175,7 @@ Describe 'Invoke-Pxget' {
         Pop-Location
         $Global:DebugPreference = $script:origDebugPref
         $Global:VerbosePreference = $script:origVerbosePref
-        Remove-Item -Path 'env:PXGET_*' -ErrorAction Ignore
+        Remove-Item -Path 'env:PRISM_*' -ErrorAction Ignore
         # Make sure that the PSModulePath doesn't get changed.
         $env:PSModulePath | Should -Be $script:psmodulePath
     }
@@ -183,30 +183,30 @@ Describe 'Invoke-Pxget' {
     Context 'command "<_>"' -Foreach @('install', 'update') {
         It 'should pass root configuration file' {
             $command = $_
-            GivenPxGetFile 'pxget.json'
-            GivenPxGetFile 'dir1\pxget.json'
+            GivenPrismFile 'prism.json'
+            GivenPrismFile 'dir1\prism.json'
             WhenInvokingCommand $command
-            ThenRanCommand $command -Passing @{ 'Path' = 'pxget.json'; 'LockPath' = 'pxget.lock.json' }
+            ThenRanCommand $command -Passing @{ 'Path' = 'prism.json'; 'LockPath' = 'prism.lock.json' }
         }
 
         It 'should pass all configuration files' {
             $command = $_
-            GivenPxGetFile 'pxget.json'
-            GivenPxGetFile 'dir1\pxget.json'
-            GivenPxGetFile 'dir1\dir2\pxget.json'
-            GivenPxGetFile 'dir3\dir4\pxget.json'
+            GivenPrismFile 'prism.json'
+            GivenPrismFile 'dir1\prism.json'
+            GivenPrismFile 'dir1\dir2\prism.json'
+            GivenPrismFile 'dir3\dir4\prism.json'
             WhenInvokingCommand $command -WithParameter @{ 'Recurse' = $true }
             ThenRanCommand $command -Passing @(
-                @{ Path = 'pxget.json' ; LockPath = 'pxget.lock.json' },
-                @{ Path = 'dir1\pxget.json' ; LockPath = 'dir1\pxget.lock.json' },
-                @{ Path = 'dir1\dir2\pxget.json' ; LockPath = 'dir1\dir2\pxget.lock.json' },
-                @{ Path = 'dir3\dir4\pxget.json' ; LockPath = 'dir3\dir4\pxget.lock.json' }
+                @{ Path = 'prism.json' ; LockPath = 'prism.lock.json' },
+                @{ Path = 'dir1\prism.json' ; LockPath = 'dir1\prism.lock.json' },
+                @{ Path = 'dir1\dir2\prism.json' ; LockPath = 'dir1\dir2\prism.lock.json' },
+                @{ Path = 'dir3\dir4\prism.json' ; LockPath = 'dir3\dir4\prism.lock.json' }
             )
         }
     }
 
     It 'should set configuration' {
-        GivenPxGetFile 'pxget.json' -WithContent @'
+        GivenPrismFile 'prism.json' -WithContent @'
 {
     "PSModules": [
         {
@@ -221,22 +221,22 @@ Describe 'Invoke-Pxget' {
 '@
         WhenInvokingCommand 'install'
         ThenRanCommand 'install' -Passing @{
-            Path = 'pxget.json';
-            LockPath = 'pxget.lock.json';
+            Path = 'prism.json';
+            LockPath = 'prism.lock.json';
             PSModulesDirectoryName = 'Modules';
             PSModules = @{ 'Name' = 'NoOp' }
         }
     }
 
     It 'should use custom configuration file name' {
-        GivenPxGetFile 'pxget.json'
-        GivenPxGetFile 'module.json'
-        GivenPxGetFile 'dir1\pxget.json'
-        GivenPxGetFile 'dir1\module.json'
-        GivenPxGetFile 'dir1\dir2\pxget.json'
-        GivenPxGetFile 'dir1\dir2\module.json'
-        GivenPxGetFile 'dir3\dir4\pxget.json'
-        GivenPxGetFile 'dir3\dir4\module.json'
+        GivenPrismFile 'prism.json'
+        GivenPrismFile 'module.json'
+        GivenPrismFile 'dir1\prism.json'
+        GivenPrismFile 'dir1\module.json'
+        GivenPrismFile 'dir1\dir2\prism.json'
+        GivenPrismFile 'dir1\dir2\module.json'
+        GivenPrismFile 'dir3\dir4\prism.json'
+        GivenPrismFile 'dir3\dir4\module.json'
         WhenInvokingCommand 'install' -WithParameter @{ FileName = 'module.json' ; Recurse = $true }
         ThenRanCommand 'install' -Passing @(
             @{ Path = 'module.json' ; LockPath = 'module.lock.json' },
@@ -247,14 +247,14 @@ Describe 'Invoke-Pxget' {
     }
 
     It 'should support extensionless configuration file' {
-        GivenPxGetFile '.pxget'
-        WhenInvokingCommand 'install' -WithParameter @{ 'FileName' = '.pxget' }
-        ThenRanCommand 'install' -Passing @{ 'Path' = '.pxget' ; LockPath = '.pxget.lock'}
+        GivenPrismFile '.prism'
+        WhenInvokingCommand 'install' -WithParameter @{ 'FileName' = '.prism' }
+        ThenRanCommand 'install' -Passing @{ 'Path' = '.prism' ; LockPath = '.prism.lock'}
     }
 
     It 'should fail when no files found' {
         WhenInvokingCommand 'install' -ErrorAction SilentlyContinue
-        ThenFailed "No pxget\.json file found"
+        ThenFailed "No prism\.json file found"
     }
 
 }

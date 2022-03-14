@@ -20,14 +20,14 @@ BeforeAll {
 }
 "@
 
-    function GivenPxGetFile
+    function GivenPrismFile
     {
         param(
             [Parameter(Mandatory)]
             [String] $Contents
         )
 
-        $Contents | Set-Content -Path 'pxget.json' -NoNewline
+        $Contents | Set-Content -Path 'prism.json' -NoNewline
     }
 
     function GivenLockFile
@@ -37,7 +37,7 @@ BeforeAll {
             [String] $Contents
         )
 
-        $Contents | Set-Content -Path 'pxget.lock.json' -NoNewline
+        $Contents | Set-Content -Path 'prism.lock.json' -NoNewline
     }
 
     function ThenInstalled
@@ -93,7 +93,7 @@ BeforeAll {
         param(
         )
 
-        Invoke-PxGet -Command 'install' |
+        Invoke-Prism -Command 'install' |
             Format-Table |
             Out-String |
             Write-Verbose -Verbose
@@ -104,7 +104,7 @@ AfterAll {
     $Global:ProgressPreference = $script:origProgressPref
 }
 
-Describe 'pxget install' {
+Describe 'prism install' {
     BeforeEach { 
         $script:testRoot = $null
         $script:moduleList = @()
@@ -118,12 +118,12 @@ Describe 'pxget install' {
     AfterEach {
         $Global:DebugPreference = $script:origDebugPref
         $Global:VerbosePreference = $script:origVerbosePref
-        Remove-Item -Path 'env:PXGET_*' -ErrorAction Ignore
+        Remove-Item -Path 'env:PRISM_*' -ErrorAction Ignore
         Pop-Location
     }
 
     It 'should create lock and install module' {
-        GivenPxGetFile @"
+        GivenPrismFile @"
         {
             "PSModules": [
                 {
@@ -135,16 +135,16 @@ Describe 'pxget install' {
 "@
         WhenInstalling
         ThenInstalled @{ 'NoOp' = '1.0.0' }
-        'pxget.lock.json' | Should -Exist
+        'prism.lock.json' | Should -Exist
         $expectedContent = ([pscustomobject]@{
             PSModules = @(
                 [pscustomobject]@{ name = 'NoOp'; version = '1.0.0'; location = $script:psgalleryLocation }
             )}) | ConvertTo-Json
-        Get-Content -Path 'pxget.lock.json' -Raw | Should -Be $expectedContent
+        Get-Content -Path 'prism.lock.json' -Raw | Should -Be $expectedContent
     }
 
     It 'should install multiple versions' {
-        GivenPxGetFile '{}' # install only cares about pxget.lock.json
+        GivenPrismFile '{}' # install only cares about prism.lock.json
         GivenLockFile @"
 {
     "PSModules": [
@@ -158,13 +158,13 @@ Describe 'pxget install' {
     }
 
     It 'should install PackageManagement and PowerShellGet' {
-        GivenPxGetFile '{}'
-        # Has to be the same version as used by PxGet internally.
+        GivenPrismFile '{}'
+        # Has to be the same version as used by Prism internally.
         $pkgMgmtVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PxGet\Modules\PackageManagement') |
+            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\Modules\PackageManagement') |
             Select-Object -ExpandProperty 'Name'
         $psGetVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\PxGet\Modules\PowerShellGet') |
+            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\Modules\PowerShellGet') |
             Select-Object -ExpandProperty 'Name'
         GivenLockFile @"
 {
@@ -179,7 +179,7 @@ Describe 'pxget install' {
     }
 
     It 'should pass and install to custom PSModules directory' {
-        GivenPxGetFile @'
+        GivenPrismFile @'
         {
             "PSModules": [
                 {
@@ -196,7 +196,7 @@ Describe 'pxget install' {
     }
 
     It 'should install prerelease versions' {
-        GivenPxGetFile '{}'
+        GivenPrismFile '{}'
         GivenLockFile ('{ "PSModules": { "name": "NoOp", "version": "1.0.0-alpha26", ' +
                       """location"": ""$($script:psgallerylocation)"" } }")
         WhenInstalling
@@ -204,7 +204,7 @@ Describe 'pxget install' {
     }
 
     It 'should install multiple modules' {
-        GivenPxGetFile '{}'
+        GivenPrismFile '{}'
         GivenLockFile ("{ ""PSModules"": [ " +
             "{ ""name"": ""NoOp"", ""version"": ""1.0.0"", ""location"": ""$($script:psgallerylocation)"" }, " +
             "{ ""name"": ""Carbon"", ""version"": ""2.11.0"", ""location"": ""$($script:psgallerylocation)"" }" +
@@ -214,7 +214,7 @@ Describe 'pxget install' {
     }
 
     It 'should handle empty lock file' {
-        GivenPxGetFile '{}'
+        GivenPrismFile '{}'
         GivenLockFile '{}'
         WhenInstalling
         ThenSucceeded
@@ -222,9 +222,9 @@ Describe 'pxget install' {
     }
 
     It 'should turn off verbose output in package management modules' {
-        GivenPxGetFile '{}'
+        GivenPrismFile '{}'
         GivenLockFile $script:latestNoOpLockFile
-        $env:PXGET_DISABLE_DEEP_VERBOSE = 'True'
+        $env:PRISM_DISABLE_DEEP_VERBOSE = 'True'
         $Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 4>&1
         $output | Write-Verbose -Verbose
@@ -247,9 +247,9 @@ Describe 'pxget install' {
 
 
     It 'should turn off debug output in package management modules' {
-        GivenPxGetFile '{}'
+        GivenPrismFile '{}'
         GivenLockFile $script:latestNoOpLockFile
-        $env:PXGET_DISABLE_DEEP_DEBUG = 'True'
+        $env:PRISM_DISABLE_DEEP_DEBUG = 'True'
         $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 5>&1
         $output | Write-Verbose -Verbose
