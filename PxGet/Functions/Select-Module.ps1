@@ -2,21 +2,25 @@ function Select-Module
 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory, ValueFromPipeline = $true)]
-        [PSCustomObject] $Module,
+        [Parameter(Mandatory, ValueFromPipeline)]
+        [Object] $Module,
 
         [Parameter(Mandatory)]
         [String] $Name,
 
-        [Parameter(Mandatory)]
-        [String] $Version,  
+        [String] $Version,
 
         [switch] $AllowPrerelease
     )
 
     process
     {
-        if( $Module.Name -ne $Name -or $Module.Version -notlike $Version )
+        if( $Module.Name -ne $Name )
+        {
+            return
+        }
+
+        if( $Version -and $Module.Version -notlike $Version )
         {
             return
         }

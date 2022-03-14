@@ -17,83 +17,137 @@ BeforeAll {
     function GivenPxGetFile
     {
         param(
-            [Parameter(Mandatory)]
-            [string] $Contents
+            [String] $Named = 'pxget.json',
+
+            [String] $WithContent = '{}'
         )
 
-        New-Item -Path $testRoot  -ItemType 'File' -Name "pxget.json" -Value $Contents
+        $dir = Split-Path -Path $Named -Parent
+        if( $dir )
+        {
+            New-Item -Path $dir -ItemType 'Directory' -Force
+        }
+        New-Item -Path $Named -ItemType 'File' -Value $WithContent
     }
 
-    function ThenError
+    function ThenFailed
     {
         param(
             [Parameter(Mandatory)]
-            [string] $Matches
-        )
-    
-        $Global:Error[-1] | Should -Match $Matches
-    }
-
-    function ThenInstalled
-    {
-        param(
-            [Parameter(Mandatory)]
-            [string] $ModuleName,
-
-            [Parameter(Mandatory)]
-            [string] $Version,
-
-            [string] $InstallPath
+            [string] $WithErrorMatching
         )
 
-        $prerelease = ''
-        if( $Version -match '^(.*)-(.*)$' )
-        {
-            $Version = $Matches[1]
-            $prerelease = $Matches[2]
-        }
-
-        if( -not $InstallPath )
-        {
-            $InstallPath = Join-Path -Path $testRoot -ChildPath 'PSModules'
-        }
-
-        $manifestPath = Join-Path -Path $InstallPath -ChildPath $ModuleName
-        $manifestPath = Join-Path -Path $manifestPath -ChildPath $Version
-        $manifestPath = Join-Path -Path $manifestPath -ChildPath "$ModuleName.psd1"
-        $manifestPath | Should -Exist
-        $manifest = Test-ModuleManifest -Path $manifestPath
-        # For PowerShell 5.1
-        if( -not ($manifest | Get-Member -Name 'Prerelease') )
-        {
-            $manifest | Add-Member -Name 'Prerelease' -MemberType ScriptProperty -Value { $this.PrivateData['PSData']['Prerelease'] }
-        }
-
-        $manifest | Should -Not -BeNullOREmpty
-        $manifest.Name | Should -Be $ModuleName
-        $manifest.Version | Should -Be $Version
-        $manifest.Prerelease | Should -Be $prerelease
+        $failed | Should -BeTrue
+        $Global:Error[-1] | Should -Match $WithErrorMatching
     }
-    
-    function ThenSucceeded
-    {
-        $script:failed | Should -BeFalse
-        $Global:Error | Should -BeNullOrEmpty
-        Assert-MockCalled -CommandName 'Get-Location' -ModuleName 'PxGet' -Times 2
-    }
-    
-    function WhenInvokingPxGet
+
+    function ThenRanCommand
     {
         [CmdletBinding()]
         param(
+            [Parameter(Mandatory)]
+            [String] $Named,
+            
+            [Parameter(Mandatory)]
+            [hashtable[]] $Passing
         )
+        $script:failed | Should -BeFalse
+        $Global:Error | Should -BeNullOrEmpty
+
+        $cmdName = (@{
+            install = 'Install-PrivateModule';
+            update = 'Update-ModuleLock';
+        })[$Named]
+
+        Assert-MockCalled -CommandName $cmdName -ModuleName 'PxGet' -Times $Passing.Length -Exactly
+
+        foreach( $config in $Passing )
+        {
+            if( -not $config['PSModulesDirectoryName'] )
+            {
+                $config['PSModulesDirectoryName'] = 'PSModules'
+            }
+
+            if( -not $config['PSModules'] )
+            {
+                $config['PSModules'] = @()
+            }
+
+            if( -not $config['LockPath'] )
+            {
+                $config['LockPath'] = 'pxget.lock.json'
+            }
+
+            Write-Debug "$($config['Path'])"
+            Assert-MockCalled -CommandName $cmdName -ModuleName 'PxGet' -Times 1 -Exactly -ParameterFilter {
+                $expectedPath = Join-Path -Path $script:testRoot -ChildPath $config['Path']
+                Write-Debug "  Path      expected  $($expectedPath)"
+                Write-Debug "            actual    $($Configuration.Path)"
+                if( $Configuration.Path -ne $expectedPath )
+                {
+                    return $false
+                }
+
+                $expectedLockPath = Join-Path -Path $script:testRoot -ChildPath $config['LockPath']
+                Write-Debug "  LockPath  expected  $($expectedLockPath)"
+                Write-Debug "            actual    $($Configuration.LockPath)"
+                if( $Configuration.LockPath -ne $expectedLockPath )
+                {
+                    return $false
+                }
+                Write-Debug "                      $($result)"
+
+                $expectedDirName = $config['PSModulesDirectoryName']
+                if( $Configuration.PSModulesDirectoryName -ne $expectedDirName )
+                {
+                    return $false
+                }
+
+                [Object[]]$expectedModules = $config['PSModules']
+                if( $Configuration.PSModules.Length -ne $expectedModules.Length )
+                {
+                    return $false
+                }
+
+                for( $idx = 0; $idx -lt $expectedModules.Length; ++$idx )
+                {
+                    $expectedModule = $expectedModules[$idx]
+                    $actualModule = $Configuration.PSModules[$idx]
+
+                    if( $expectedModule.Name -ne $actualModule.Name )
+                    {
+                        return $false
+                    }
+
+                    if( $expectedModule.Version -ne $actualModule.Version )
+                    {
+                        return $false
+                    }
+                }
+
+                return $true
+            }
+        }
+    }
+    
+    function WhenInvokingCommand
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)]
+            [String] $Named,
+
+            [hashtable] $WithParameters = @{}
+        )
+
+        Mock -CommandName 'Install-PrivateModule' -ModuleName 'PxGet'
+        Mock -CommandName 'Update-ModuleLock' -ModuleName 'PxGet'
 
         try 
         {
-            Mock -CommandName 'Get-Location' -ModuleName 'PxGet' { return $testRoot }
-            Invoke-PxGet 'install'
+            Invoke-PxGet -Command $Named @WithParameters
         }
-        catch 
+        catch
         {
             $script:failed = $true
             Write-Error -ErrorRecord $_ -ErrorAction $ErrorActionPreference
@@ -110,255 +164,97 @@ Describe 'Invoke-Pxget' {
         $script:testRoot = $null
         $script:moduleList = @()
         $script:failed = $false
-        $Global:Error.Clear()
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        $script:psmodulePath = $env:PSModulePath
         New-Item -Path $script:testRoot -ItemType 'Directory'
+        Push-Location $script:testRoot
+        $Global:Error.Clear()
     }
 
     AfterEach {
+        Pop-Location
         $Global:DebugPreference = $script:origDebugPref
         $Global:VerbosePreference = $script:origVerbosePref
         Remove-Item -Path 'env:PXGET_*' -ErrorAction Ignore
+        # Make sure that the PSModulePath doesn't get changed.
+        $env:PSModulePath | Should -Be $script:psmodulePath
     }
 
-    It 'should pass when there is a valid module in the pxget file' {
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0"
-                }
-            ]
+    Context 'command "<_>"' -Foreach @('install', 'update') {
+        It 'should pass root configuration file' {
+            $command = $_
+            GivenPxGetFile 'pxget.json'
+            GivenPxGetFile 'dir1\pxget.json'
+            WhenInvokingCommand $command
+            ThenRanCommand $command -Passing @{ 'Path' = 'pxget.json'; 'LockPath' = 'pxget.lock.json' }
         }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
-    }
 
-    It 'should pass when different versions of the same module are installed' {
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "Carbon",
-                    "Version": "2.11.0"
-                },
-                {
-                    "Name": "Carbon",
-                    "Version": "2.10.0"
-                }
-            ]
+        It 'should pass all configuration files' {
+            $command = $_
+            GivenPxGetFile 'pxget.json'
+            GivenPxGetFile 'dir1\pxget.json'
+            GivenPxGetFile 'dir1\dir2\pxget.json'
+            GivenPxGetFile 'dir3\dir4\pxget.json'
+            WhenInvokingCommand $command -WithParameter @{ 'Recurse' = $true }
+            ThenRanCommand $command -Passing @(
+                @{ Path = 'pxget.json' ; LockPath = 'pxget.lock.json' },
+                @{ Path = 'dir1\pxget.json' ; LockPath = 'dir1\pxget.lock.json' },
+                @{ Path = 'dir1\dir2\pxget.json' ; LockPath = 'dir1\dir2\pxget.lock.json' },
+                @{ Path = 'dir3\dir4\pxget.json' ; LockPath = 'dir3\dir4\pxget.lock.json' }
+            )
         }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'Carbon' -Version '2.11.0'
-        ThenInstalled -ModuleName 'Carbon' -Version '2.10.0'
     }
 
-    It 'should pass when given an install path that exists' {
-        $testPath = Join-Path -Path $testRoot -ChildPath 'TestPath'
-        New-Item -Path $testPath -ItemType 'Directory'
-        $contents = @"
+    It 'should set configuration' {
+        GivenPxGetFile 'pxget.json' -WithContent @'
+{
+    "PSModules": [
         {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0",
-                    "Path": $($testPath | ConvertTo-Json)
-                }
-            ]
+            "Name": "NoOp"
         }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0' -InstallPath $testPath
-    }
-
-    It 'should pass when given an install path that does not exist' {
-        $testPath = Join-Path -Path $testRoot -ChildPath 'NewPath'
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0",
-                    "Path": $($testPath | ConvertTo-Json)
-                }
-            ]
+    ],
+    "File": "should\\get\\overwritten",
+    "LockPath": "should\\get\\overwritten",
+    "Path": "should\\get\\overwritten",
+    "PSModulesDirectoryName": "Modules"
+}
+'@
+        WhenInvokingCommand 'install'
+        ThenRanCommand 'install' -Passing @{
+            Path = 'pxget.json';
+            LockPath = 'pxget.lock.json';
+            PSModulesDirectoryName = 'Modules';
+            PSModules = @{ 'Name' = 'NoOp' }
         }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0' -InstallPath $testPath
     }
 
-    It 'should pass and install to PSModules directory if path is null or empty' {
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0",
-                    "Path": ""
-                }
-            ]
-        }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
+    It 'should use custom configuration file name' {
+        GivenPxGetFile 'pxget.json'
+        GivenPxGetFile 'module.json'
+        GivenPxGetFile 'dir1\pxget.json'
+        GivenPxGetFile 'dir1\module.json'
+        GivenPxGetFile 'dir1\dir2\pxget.json'
+        GivenPxGetFile 'dir1\dir2\module.json'
+        GivenPxGetFile 'dir3\dir4\pxget.json'
+        GivenPxGetFile 'dir3\dir4\module.json'
+        WhenInvokingCommand 'install' -WithParameter @{ FileName = 'module.json' ; Recurse = $true }
+        ThenRanCommand 'install' -Passing @(
+            @{ Path = 'module.json' ; LockPath = 'module.lock.json' },
+            @{ Path = 'dir1\module.json' ; LockPath = 'dir1\module.lock.json' },
+            @{ Path = 'dir1\dir2\module.json' ; LockPath = 'dir1\dir2\module.lock.json' },
+            @{ Path = 'dir3\dir4\module.json' ; LockPath = 'dir3\dir4\module.lock.json' }
+        )
     }
 
-    It 'should pass when the module to be installed is a prerelease version' {
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0-alpha26"
-                }
-            ]
-        }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0-alpha26'
+    It 'should support extensionless configuration file' {
+        GivenPxGetFile '.pxget'
+        WhenInvokingCommand 'install' -WithParameter @{ 'FileName' = '.pxget' }
+        ThenRanCommand 'install' -Passing @{ 'Path' = '.pxget' ; LockPath = '.pxget.lock'}
     }
 
-    It 'should pass when there are multiple modules to be installed' {
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0"
-                },
-                {
-                    "Name": "Carbon",
-                    "Version": "2.11.0"
-                }
-            ]
-        }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-        ThenInstalled -ModuleName 'NoOp' -Version '1.0.0'
-        ThenInstalled -ModuleName 'Carbon' -Version '2.11.0'
+    It 'should fail when no files found' {
+        WhenInvokingCommand 'install' -ErrorAction SilentlyContinue
+        ThenFailed "No pxget\.json file found"
     }
 
-    It 'should run but write an error when there is an invalid module name' {
-        $contents = @"
-        {
-            "PSModules": [
-                {
-                    "Name": "Invalid",
-                    "Version": "9.9.9"
-                },
-                {
-                    "Name": "Invalid2",
-                    "Version": "9.9.9"
-                },
-                {
-                    "Name": "ProgetAutomation",
-                    "Version": "1.0.0"
-                }
-            ]
-        }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenError -Matches ([regex]::Escape('Module(s) "Invalid", "Invalid2" not found.'))
-        ThenInstalled -ModuleName 'ProGetAutomation' -Version '1.0.0'
-    }
-
-    It 'should pass when the pxget file is empty' {
-        $contents = @"
-    
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-    }
-
-    It 'should pass when there are no modules listed in the pxget file' {
-        $contents = @"
-        {
-            "PSModules": [
-            ]
-        }
-"@
-        GivenPxGetFile -Contents $contents
-        WhenInvokingPxGet
-        ThenSucceeded
-    }
-
-    It 'should fail when there is no pxget file' {
-        WhenInvokingPxGet -ErrorAction SilentlyContinue
-        ThenError -Matches 'There is no pxget.json file in the current directory.'
-    }
-
-    It 'should turn off verbose output in package management modules' {
-        GivenPxGetFile @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0"
-                }
-            ]
-        }
-"@
-        $env:PXGET_DISABLE_DEEP_VERBOSE = 'True'
-        $Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
-        $output = WhenInvokingPxGet 4>&1
-        # From Import-Module.
-        $output |
-            Where-Object { $_ -like 'Loading module from path ''*PackageManagement.psd1''.' } |
-            Should -BeNullOrEmpty
-        $output |
-            Where-Object { $_ -like 'Loading module from path ''*PowerShellGet.psd1''.' } |
-            Should -BeNullOrEmpty
-        # From PackageManagement.
-        $output |
-            Where-Object { $_ -like 'Using the provider ''PowerShellGet'' for searching packages.' } |
-            Should -BeNullOrEmpty
-        # From PowerShellGet.
-        $output |
-            Where-Object { $_ -like 'Module ''NoOp'' was saved successfully to path ''*''.' } |
-            Should -BeNullOrEmpty
-    }
-
-
-    It 'should turn off debug output in package management modules' {
-        GivenPxGetFile @"
-        {
-            "PSModules": [
-                {
-                    "Name": "NoOp",
-                    "Version": "1.0.0"
-                }
-            ]
-        }
-"@
-        $env:PXGET_DISABLE_DEEP_DEBUG = 'True'
-        $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
-        $output = WhenInvokingPxGet 5>&1
-
-        # Import-Module doesn't output any debug messages.
-        # Save-Module does.
-        # From PowerShellGet. Can't find PackageManagement-only debug messages.
-        $output |
-            Where-Object { $_ -like '*PackagePRovider::FindPackage with name NoOp' } |
-            Should -BeNullOrEmpty
-    }
 }

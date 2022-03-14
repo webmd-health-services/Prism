@@ -57,7 +57,8 @@ pxget install
 ```
 
 When PxGet is done running, there should be a "PSModules" directory in the current directory that contains all the
-private modules listed in the "pxget.json" file.
+private modules listed in the "pxget.json" file. There will also be a "pxget.lock.json" file, which should also get
+checked into source control with the "pxget.json" file.
 
 
 # Adding to Builds
@@ -80,16 +81,20 @@ specific repository.
 The `pxget install` command returns module objects (returned by `Get-Module`). Some build systems display those as a
 list instead of a table, so we pipe the install output to `Format-Table` to make it look better in build output.
 
+Make sure you've run `pxget install` at least once, and check the file it creates, `pxget.lock.json`, into your
+repository. If you don't, the `pxget install` command on the server will always generate the lock file, which will make
+builds take longer.
+
 
 # Configuration
 
 ## Overview
 
-Each module object in the "pxget.json" file can have three properties, `Name`, `Version`, and `Path`. Only `Name` is
-mandatory, and it must be the name of the module to install. The same module may be listed multiple times, if you need
-multiple versions or need it installed in multiple directories.
+Each module object in the "pxget.json" file can have `Name` and `Version` properties. Only `Name` is mandatory,
+and it must be the name of the module to install. The same module may be listed multiple times, if you need multiple
+versions.
 
-## Version
+## Module Version
 
 The `Version` property is optional. If omitted, PxGet will always install the latest version. Use wildcards to pin to
 specific minor, patch, or prerelease versions of a module. PxGet assumes modules use
@@ -103,11 +108,25 @@ For example, if a module has versions `5.2.0-rc1`, `5.1.1`, `5.1.0`, `5.1.0-rc1`
 * `5.*-rc*` would pin the module to the latest release or prerelease of version 5, `5.2.0-rc1`. In order to use
 prerelease versions, the version *must* contain a `-` prerelease prefix.
 
-## Path
+Modules are pinned/locked to a specific version of a module the first time `pxget install` is run. The command generates
+a `pxget.lock.json` file, with the specific versions of each module to install. Once a lock file is created, `pxget
+install` will only install the module versions listed in the lock file. To update the versions in the lock file to
+newer versions or to reflect changes made to the `pxget.json` file, run `pxget update`.
 
-The `Path` property is optional. By default, the module is saved to a `PSModules` directory in the same directory as
-the "pxget.json" file. If the `Path` property is provided, the module will instead be saved to that directory, which
-will be created if it doesn't exist. Relative paths are resolved from the directory of the "pxget.json" file.
+## Output Directory
+
+Modules will always be saved in the same directory as the "pxget.json" file, in a directory named "PSModules". You can
+customize this directory name with the `PSModulesDirectoryName` option in your `pxget.json` file:
+
+```json
+{
+    "PSModules": [],
+    "PSModulesDirectoryName": "Modules"
+}
+```
+
+To put the PSModules directory in a *different* directory, put a "pxget.json" file in that directory. Use the "pxget"
+command's `-Recurse` switch to run pxget against every pxget.json file under the current directory.
 
 
 # Using Private Modules
@@ -158,17 +177,36 @@ PowerShell.
 
 # Implementation
 
-PxGet uses its own private copies of the `PackageManagement` and `PowerShellGet` modules, which it uses to find and save modules. It calls `Find-Module` once to get the latest version of all the modules in the "pxget.json" file. For each 
-module not pinned to the latest version, PxGet will call `Find-Module` again to get all versions of that module. (If the
-module's version from the "pxget.json" file contains the prerelease suffix, `-`, prerelease versions will be included.) PxGet selects the first version returned by `Find-Module` that matches the version wildcard from the "pxget.json" file.
-Each module is installed with `Save-Module`, from the repository on the module object returned by `Find-Module`.
+## Overview
+
+PxGet uses its own private copies of the `PackageManagement` and `PowerShellGet` modules to find and install modules.
+
+## pxget install
+
+For each module and version in the lock file, `pxget install` calls the `Save-Module` cmdlet to install that specific
+version. It passes the name of all installed repositories to the `Save-Module` cmdlet's `-Repository` parameter. The
+`Save-Module` command loops through each repository, and installs the first module it finds.
+
+The `pxget install` command first uses `Get-Module` to see if the correct version of the module is installed in the
+private PSModules directory. If it is, the module is not re-installed. If it isn't, the module is installed using the
+`Save-Module` command.
+
+## pxget update
+
+It calls`Find-Module` once to get the latest version of all the modules in the "pxget.json" file. For each module with a
+specific version that doesn't match the latest version, PxGet will call `Find-Module` again to get all versions of that
+module. (If the module's version from the "pxget.json" file contains the prerelease suffix, `-`, prerelease versions
+will be included.) PxGet selects the first version returned by `Find-Module` that matches the version wildcard from the
+"pxget.json" file. It writes these versions to a lock file, which is used by the `pxget install` command to install
+the modules.
 
 
 # Troubleshooting
 
 ## Command Not Recognized
 
-If you get an error that "The term 'pxget' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
+If you get an error that "The term 'pxget' is not recognized as the name of a cmdlet, function, script file, or operable
+program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.",
 make sure PxGet is actually installed. Run this command:
 
 ```powershell
