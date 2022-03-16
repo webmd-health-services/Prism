@@ -18,203 +18,108 @@ function Invoke-PxGet
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [ValidateSet('install')]
-        [string] $Command
+        [ValidateSet('install', 'update')]
+        [String] $Command,
+
+        # The name of the PxGet configuration file to use. Defaults to `pxget.json`.
+        [String] $FileName = 'pxget.json',
+
+        [switch] $Recurse
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     $origModulePath = $env:PSModulePath
-    $privateModulesPath = Join-Path -Path $(Get-Location) -ChildPath 'PSModules'
-    if( -not (Test-Path -Path $privateModulesPath) )
-    {
-        New-Item -Path $privateModulesPath -ItemType 'Directory' | Out-Null
-    }
 
-    $deepPrefs = @{}
-
-    if( (Test-Path -Path 'env:PXGET_DISABLE_DEEP_DEBUG') )
-    {
-        $deepPrefs['Debug'] = $false
-    }
-
-    if( (Test-Path -Path 'env:PXGET_DISABLE_DEEP_VERBOSE') )
-    {
-        $deepPrefs['Verbose'] = $false
-    }
-
-    $activity = 'pxget install'
+    $pkgMgmtPrefs = Get-PackageManagementPreference
     try
     {
         # pxget should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
         # to pxget module's Modules directory ensures no other package modules get loaded.
-        $pxGetModulesRoot = Join-Path -Path $moduleRoot -ChildPath 'Modules'
-        $env:PSModulePath = $pxGetModulesRoot
-        Write-Debug "PSModulePath  $($env:PSModulePath)"
-        Write-Debug "moduleRoot    $($pxGetModulesRoot)"
+        $pkgManagementModulePath = Join-Path -Path $moduleRoot -ChildPath 'Modules'
+        $env:PSModulePath = $pkgManagementModulePath
+        Write-Debug 'AVAILABLE MODULES'
         Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
-        Import-Module -Name 'PackageManagement' @deepPrefs
-        Import-Module -Name 'PowerShellGet' @deepPrefs
+        Import-Module -Name 'PackageManagement' @pkgMgmtPrefs
+        Import-Module -Name 'PowerShellGet' @pkgMgmtPrefs
+        Write-Debug 'IMPORTED MODULES'
         Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
 
-        $env:PSModulePath = @($privateModulesPath, $pxGetModulesRoot) -join [IO.Path]::PathSeparator
+        Write-Debug 'AVAILABLE MODULES'
         Write-Debug "PSModulePath  $($env:PSModulePath)"
         Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
 
-        $modulesNotFound = @()
-        $pxgetJsonPath = Join-Path -Path (Get-Location) -ChildPath 'pxget.json'
-
-        if( -not (Test-Path -Path $pxgetJsonPath) )
+        $Force = $FileName.StartsWith('.')
+        $pxgetJsonFiles = Get-ChildItem -Path '.' -Filter $FileName -Recurse:$Recurse -Force:$Force -ErrorAction Ignore
+        if( -not $pxgetJsonFiles )
         {
-            Write-Error 'There is no pxget.json file in the current directory.'
-            return
-        }
-
-        $pxModules = Get-Content -Path $pxgetJsonPath | ConvertFrom-Json
-        if( -not $pxModules )
-        {
-            Write-Warning 'The pxget.json file is empty!'
-            return
-        }
-
-        $moduleNames = $pxModules.PSModules | Select-Object -ExpandProperty 'Name'
-        if( -not $moduleNames )
-        {
-            Write-Warning "There are no modules listed in ""$($pxgetJsonPath | Resolve-Path -Relative)""."
-            return
-        }
-
-        $numInstalls = $moduleNames | Measure-Object | Select-Object -ExpandProperty 'Count'
-        $numInstalls = $numInstalls * 2 + 1
-        Write-Debug "  numSteps  $($numInstalls)"
-        $curStep = 0
-        $status = 'Finding latest module versions.'
-        $uniqueModuleNames = $moduleNames | Select-Object -Unique
-        $op = "Find-Module -Name '$($uniqueModuleNames -join "', '")'"
-        $percentComplete = ($curStep++/$numInstalls * 100)
-        Write-Progress -Activity $activity -Status $status -CurrentOperation $op -PercentComplete $percentComplete
-
-        $modules = Find-Module -Name $uniqueModuleNames -ErrorAction Ignore @deepPrefs
-        if( -not $modules )
-        {
-            $msg = "$($pxgetJsonPath | Resolve-Path -Relative): Modules ""$($uniqueModuleNames -join '", "')"" not " +
-                   'found.'
-            Write-Error $msg
-            return
-        }
-
-        # Find-Module is expensive. Limit calls as much as possible.
-        $findModuleCache = @{}
-
-        # We only care if the module is in PSModules right now. Later we'll allow dev dependencies, which can be
-        # installed globally.
-        $env:PSModulePath = $privateModulesPath
-        foreach( $pxModule in $pxModules.PSModules )
-        {
-            $allowPrerelease = $pxModule.Version -match '-'
-
-            $progressState = @{
-                Activity = $activity;
-                Status = "Saving $($pxModule.Name) $($pxModule.Version)";
+            $msg = ''
+            $suffix = ''
+            if( $Recurse )
+            {
+                $suffix = 's'
+                $msg = ' or any of its sub-directories'
             }
 
-            Write-Debug "  curStep   $($curStep)"
-            $percentComplete = ($curStep++/$numInstalls * 100)
-            $moduleToInstall =
-                $modules |
-                Select-Module -Name $pxModule.Name -Version $pxModule.Version -AllowPrerelease:$allowPrerelease |
-                Select-Object -First 1
-            if( -not $moduleToInstall )
-            {
-                $allowPrereleaseOp = ''
-                if( $allowPrerelease )
-                {
-                    $allowPrereleaseOp = ' -AllowPrerelease'
-                }
-                $op = "Find-Module -Name '$($pxModule.Name)' -AllVersions$($allowPrereleaseOp)"
-                if( -not $findModuleCache.ContainsKey($op) )
-                {
-                    Write-Progress @progressState -CurrentOperation $op -PercentComplete $percentComplete
-                    $findModuleCache[$op] = Find-Module -Name $pxModule.Name `
-                                                        -AllVersions `
-                                                        -AllowPrerelease:$allowPrerelease `
-                                                        -ErrorAction Ignore `
-                                                        @deepPrefs
-                }
-                $moduleToInstall =
-                    $findModuleCache[$op] |
-                    Select-Module -Name $pxModule.Name -Version $pxModule.Version -AllowPrerelease:$allowPrerelease |
-                    Select-Object -First 1
-            }
+            $msg = "No $($FileName) file$($suffix) found in the current directory$($msg)."
+            Write-Error -Message $msg -ErrorAction Stop
+            return
+        }
 
-            if( -not $moduleToInstall )
+        foreach( $pxgetJsonFile in $pxgetJsonFiles )
+        {
+            $path = $pxgetJsonFile.FullName
+            $config = Get-Content -Path $path | ConvertFrom-Json
+            if( -not $config )
             {
-                Write-Debug "  curStep   $($curStep)"
-                $curStep += 1
-                $modulesNotFound += $pxModule.Name
+                Write-Warning "File ""$($path | Resolve-Path -Relative) is empty."
                 continue
             }
 
-            $progressState['Status'] = "Saving $($moduleToInstall.Name) $($moduleToInstall.Version)"
-            Write-Progress @progressState -PercentComplete $percentComplete
-            Start-Sleep -Seconds 2
-
-            $installedModule =
-                Get-Module -Name $pxModule.Name -List |
-                Where-Object 'Version' -eq $moduleToInstall.Version
-            # The latest version that matches the version in the pxget.json file is already installed
-            if( $installedModule )
+            $lockBaseName = [IO.Path]::GetFileNameWithoutExtension($path)
+            $lockExtension = [IO.Path]::GetExtension($path)
+            # Hidden file with no extension, e.g. `.pxget`
+            if( -not $lockBaseName -and $lockExtension )
             {
-                Write-Debug "  curStep   $($curStep)"
-                $curStep += 1
-
-                $installedModule
-                continue
+                $lockBaseName = $lockExtension
+                $lockExtension = ''
             }
 
-            $installPath = $privateModulesPath
-            if( ($pxModule.PSObject.Properties.Name -Contains 'Path') -and (-not [string]::IsNullOrWhiteSpace($pxModule.Path)) )
-            {
-                $installPath = $pxModule.Path
-            }
+            $lockPath = Join-Path -Path ($path | Split-Path -Parent) -ChildPath "$($lockBaseName).lock$($lockExtension)"
+            # private members that users aren't allowed to customize.
+            $config |
+                Add-Member -Name 'Path' -MemberType NoteProperty -Value $path -PassThru -Force |
+                Add-Member -Name 'File' -MemberType NoteProperty -Value $pxgetJsonFile -PassThru -Force |
+                Add-Member -Name 'LockPath' -MemberType NoteProperty -Value $lockPath -PassThru -Force |
+                Out-Null
 
-            if( -not (Test-Path -Path $installPath) )
-            {
-                New-Item -Path $installPath -ItemType 'Directory' | Out-Null
-            }
+            $ignore = @{ 'ErrorAction' = 'Ignore' }
+            # public configuration that users can customize.
+            # Add-Member doesn't return an object if the member already exists, so these can't be part of the pipeline.
+            $config | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() @ignore
+            $config | Add-Member -Name 'PSModulesDirectoryName' -MemberType NoteProperty -Value 'PSModules' @ignore
 
-            $op = "Save-Module -Name '$($moduleToInstall.Name)' -Version '$($moduleToInstall.Version)' -Path " +
-                  "'$($installPath | Resolve-Path -Relative)' -Repository '$($moduleToInstall.Repository)'"
-            Write-Debug "  curStep   $($curStep)"
-            $percentComplete = ($curStep++/$numInstalls * 100)
-            Write-Progress @progressState -CurrentOperation $op -PercentComplete $percentComplete
-            $curProgressPref = $ProgressPreference
-            $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
-            try
-            {
-                # Not installed. Install it. We pipe it so the repository of the module is also used.
-                $moduleToInstall | Save-Module -Path $installPath @deepPrefs
-            }
-            finally
-            {
-                $Global:ProgressPreference = $curProgressPref
-            }
+            # This makes it so we can use PowerShell's module cmdlets as much as possible.
+            $privateModulePath =  Join-Path -Path $pxgetJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
+            $env:PSModulePath = "$($privateModulePath)$([IO.Path]::PathSeparator)$($pkgManagementModulePath)"
 
-            $savedToPath = Join-Path -Path $installPath -ChildPath $moduleToInstall.Name
-            $savedToPath = Join-Path -Path $savedToPath -ChildPath ($moduleToInstall.Version -replace '-.*$', '')
-            Get-Module -Name $savedToPath -ListAvailable @deepPrefs
-        }
-        if( $modulesNotFound )
-        {
-            Write-Error "$($pxgetJsonPath | Resolve-Path -Relative): Module(s) ""$($modulesNotFound -join '", "')"" not found."
-            return
+            switch( $Command )
+            {
+                'install' 
+                {
+                    $config | Install-PrivateModule
+                }
+                'update'
+                {
+                    $config | Update-ModuleLock
+                }
+            }
         }
     }
     finally
     {
         $env:PSModulePath = $origModulePath
-        Write-Progress -Activity $activity -Completed
     }
 }
 

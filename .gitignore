@@ -1,6 +1,6 @@
-/.output
-/PSModules
-/.vscode
+/.output/
+/PSModules/
+/.vscode/
 /PxGet/CHANGELOG.md
 /PxGet/LICENSE
 /PxGet/NOTICE
