@@ -15,7 +15,7 @@
 @{
 
     # Script module or binary module file associated with this manifest.
-    RootModule = 'PxGet.psm1'
+    RootModule = 'Prism.psm1'
 
     # Version number of this module.
     ModuleVersion = '0.2.0'
@@ -37,14 +37,14 @@
 
     # Description of the functionality provided by this module
     Description = @'
-PxGet is a PowerShell module manager inspired by NuGet. Run `pxget install` in a source code repository, and PxGet will
-save private modules into a "PSModules" directory in that repository. PxGet let's you:
+Prism is a PowerShell module manager inspired by NuGet. Run `prism install` in a source code repository, and Prism will
+save private modules into a "PSModules" directory in that repository. Prism let's you:
 
 * Package and deploy modules side-by-side with the app or tool that uses them without needing to install
 modules globally ahead of time.
 * Not worry about what modules are or aren't installed. Scripts can import and use modules from the "PSModules"
 directory in the script's source code repository.
-* Avoid comitting modules to the source code repository. Team members and build processes run `pxget install` to
+* Avoid comitting modules to the source code repository. Team members and build processes run `prism install` to
 get modules installed.
 '@
 
@@ -86,7 +86,7 @@ get modules installed.
 
     # Functions to export from this module. Only list public function here.
     FunctionsToExport = @(
-        'Invoke-PxGet'
+        'Invoke-Prism'
     )
 
     # Cmdlets to export from this module. By default, you get a script module, so there are no cmdlets.
@@ -97,7 +97,7 @@ get modules installed.
 
     # Aliases to export from this module. Don't create/export aliases. It can pollute your user's sessions.
     AliasesToExport = @(
-        'pxget'
+        'prism'
     )
 
     # DSC resources to export from this module
@@ -121,7 +121,7 @@ get modules installed.
             LicenseUri = 'http://www.apache.org/licenses/LICENSE-2.0'
 
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/webmd-health-services/PxGet'
+            ProjectUri = 'https://github.com/webmd-health-services/Prism'
 
             # A URL to an icon representing this module.
             # IconUri = ''
@@ -129,7 +129,7 @@ get modules installed.
             Prerelease = ''
 
             # ReleaseNotes of this module
-            ReleaseNotes = 'https://github.com/webmd-health-services/PxGet/blob/main/CHANGELOG.md'
+            ReleaseNotes = 'https://github.com/webmd-health-services/Prism/blob/main/CHANGELOG.md'
         } # End of PSData hashtable
 
     } # End of PrivateData hashtable

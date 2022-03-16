@@ -1,7 +1,7 @@
 
 Build:
 - Version:
-    Path: PxGet\PxGet.psd1
+    Path: Prism\Prism.psd1
     Prerelease:
     - "*/*": alpha$(WHISKEY_BUILD_NUMBER)
     - develop: rc$(WHISKEY_BUILD_NUMBER)
@@ -15,22 +15,22 @@ Build:
 - GetPowerShellModule:
     Name: PowerShellGet
     Version: 2.*
-    Path: PxGet\Modules
+    Path: Prism\Modules
 
 - GetPowerShellModule:
     Name: PackageManagement
     Version: 1.*
-    Path: PxGet\Modules
+    Path: Prism\Modules
 
 # Dot-sourcing files is expensive. Move all functions into .psm1 file to improve import speed. Do this before testing
 # to ensure the module still works.
 - MergeFile:
     OnlyBy: BuildServer
     # Builds run twice on some serves. Only run this step if the module hasn't been merged yet.
-    IfExists: PxGet\Functions\*.ps1
+    IfExists: Prism\Functions\*.ps1
     Path:
-    - PxGet\Functions\*.ps1
-    DestinationPath: PxGet\PxGet.psm1
+    - Prism\Functions\*.ps1
+    DestinationPath: Prism\Prism.psm1
     DeleteSourceFiles: true
     TextSeparator: "$(NewLine)$(NewLine)"
 
@@ -52,12 +52,12 @@ Build:
     - README.md
     - LICENSE
     - NOTICE
-    DestinationDirectory: PxGet
+    DestinationDirectory: Prism
 
 - Zip:
-    ArchivePath: .output\PxGet-$(WHISKEY_SEMVER2).zip
+    ArchivePath: .output\Prism-$(WHISKEY_SEMVER2).zip
     Path: 
-    - PxGet
+    - Prism
     Exclude:
     - "*.pdb"
     - "*.orig"
@@ -65,18 +65,18 @@ Build:
 - Exec:
     OnlyBy: BuildServer
     Path: appveyor
-    Argument: [ 'PushArtifact', '.output/PxGet-$(WHISKEY_SEMVER2).zip', '-DeploymentName', 'GitHub' ]
+    Argument: [ 'PushArtifact', '.output/Prism-$(WHISKEY_SEMVER2).zip', '-DeploymentName', 'GitHub' ]
 
 
 - PublishPowerShellModule:
-    Path: PxGet
+    Path: Prism
 
 - Exec:
     OnlyBy: BuildServer
     Path: appveyor
     Argument: [
         'PushArtifact',
-        '.output/PxGet.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
+        '.output/Prism.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
         '-DeploymentName',
         'PowerShellGallery'
     ]
@@ -90,4 +90,4 @@ Build:
         TestResult:
             Enabled: true
             OutputPath: .output\pester.xml
-            TestSuiteName: PxGet
+            TestSuiteName: Prism

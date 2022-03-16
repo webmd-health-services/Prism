@@ -29,8 +29,8 @@ $Global:WhatIfPreference = $WhatIfPreference = $false
 try
 {
     $modules = [ordered]@{
-        'PxGet' = '..\PxGet';
-        'PxGetTestHelper' = 'PxGetTestHelper';
+        'Prism' = '..\Prism';
+        'PrismTestHelper' = 'PrismTestHelper';
     }
     foreach( $moduleName in $modules.Keys )
     {

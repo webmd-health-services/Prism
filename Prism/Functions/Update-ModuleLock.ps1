@@ -123,10 +123,10 @@ function Update-ModuleLock
             }
 
             Write-Progress @activity -Status "Saving lock file ""$($Configuration.LockPath)""." -PercentComplete 100
-            $pxgetLock = [pscustomobject]@{
+            $prismLock = [pscustomobject]@{
                 PSModules = $locks;
             }
-            $pxgetLock | ConvertTo-Json -Depth 2 | Set-Content -Path $Configuration.LockPath -NoNewline
+            $prismLock | ConvertTo-Json -Depth 2 | Set-Content -Path $Configuration.LockPath -NoNewline
 
             if( $modulesNotFound.Count )
             {

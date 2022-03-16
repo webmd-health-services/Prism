@@ -1,8 +1,0 @@
-TOPIC
-    about_PxGet
-
-SHORT DESCRIPTION
-    PxGet is a PowerShell module for...
-
-LONG DESCRIPTION
-    The PxGet PowerShell module...
