@@ -111,7 +111,7 @@ function Update-ModuleLock
                 $pin = [pscustomobject]@{
                     name = $moduleToInstall.Name;
                     version = $moduleToInstall.Version;
-                    location = $moduleToInstall.RepositorySourceLocation;
+                    repositorySourceLocation = $moduleToInstall.RepositorySourceLocation;
                 }
                 [void]$locks.Add( $pin )
 
@@ -127,7 +127,7 @@ function Update-ModuleLock
                     ModuleName = $pxModule.Name;
                     Version = $versionDesc;
                     LockedVersion = $pin.version;
-                    Location = $pin.location;
+                    RepositorySourceLocation = $pin.repositorySourceLocation;
                     Path = ($Configuration.LockPath | Resolve-Path -Relative);
                 }
                 $moduleLock.pstypenames.Add('Prism.ModuleLock')

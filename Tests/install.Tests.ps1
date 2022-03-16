@@ -21,7 +21,7 @@ BeforeAll {
     "PSModules": { 
         "name": "NoOp",
         "version": "$($script:latestNoOpModule.Version)",
-        "location": "$($script:defaultLocation)"
+        "repositorySourceLocation": "$($script:defaultLocation)"
     }
 }
 "@
@@ -171,7 +171,7 @@ Describe 'prism install' {
         'prism.lock.json' | Should -Exist
         $expectedContent = ([pscustomobject]@{
             PSModules = @(
-                [pscustomobject]@{ name = 'NoOp'; version = '1.0.0'; location = $script:defaultLocation }
+                [pscustomobject]@{ name = 'NoOp'; version = '1.0.0'; repositorySourceLocation = $script:defaultLocation }
             )}) | ConvertTo-Json
         Get-Content -Path 'prism.lock.json' -Raw | Should -Be $expectedContent
     }
@@ -181,8 +181,8 @@ Describe 'prism install' {
         GivenLockFile @"
 {
     "PSModules": [
-        { "name": "Carbon", "version": "2.11.1", "location": "$($script:defaultLocation)" },
-        { "name": "Carbon", "version": "2.11.0", "location": "$($script:defaultLocation)" }
+        { "name": "Carbon", "version": "2.11.1", "repositorySourceLocation": "$($script:defaultLocation)" },
+        { "name": "Carbon", "version": "2.11.0", "repositorySourceLocation": "$($script:defaultLocation)" }
     ]
 }
 "@
@@ -202,8 +202,8 @@ Describe 'prism install' {
         GivenLockFile @"
 {
     "PSModules": [
-        { "name": "PackageManagement", "version": "$($pkgMgmtVersion)", "location": "$($script:defaultLocation)" },
-        { "name": "PowerShellGet", "version": "$($psGetVersion)", "location": "$($script:defaultLocation)" }
+        { "name": "PackageManagement", "version": "$($pkgMgmtVersion)", "repositorySourceLocation": "$($script:defaultLocation)" },
+        { "name": "PowerShellGet", "version": "$($psGetVersion)", "repositorySourceLocation": "$($script:defaultLocation)" }
     ]
 }
 "@
@@ -231,7 +231,7 @@ Describe 'prism install' {
     It 'should install prerelease versions' {
         GivenPrismFile '{}'
         GivenLockFile ('{ "PSModules": { "name": "NoOp", "version": "1.0.0-alpha26", ' +
-                      """location"": ""$($script:defaultLocation)"" } }")
+                      """repositorySourceLocation"": ""$($script:defaultLocation)"" } }")
         WhenInstalling
         ThenInstalled @{ 'NoOp' = @('1.0.0-alpha26') }
     }
@@ -239,8 +239,8 @@ Describe 'prism install' {
     It 'should install multiple modules' {
         GivenPrismFile '{}'
         GivenLockFile ("{ ""PSModules"": [ " +
-            "{ ""name"": ""NoOp"", ""version"": ""1.0.0"", ""location"": ""$($script:defaultLocation)"" }, " +
-            "{ ""name"": ""Carbon"", ""version"": ""2.11.0"", ""location"": ""$($script:defaultLocation)"" }" +
+            "{ ""name"": ""NoOp"", ""version"": ""1.0.0"", ""repositorySourceLocation"": ""$($script:defaultLocation)"" }, " +
+            "{ ""name"": ""Carbon"", ""version"": ""2.11.0"", ""repositorySourceLocation"": ""$($script:defaultLocation)"" }" +
         "] }")
         WhenInstalling
         ThenInstalled @{ 'NoOp' = '1.0.0' ; 'Carbon' = '2.11.0' ; }

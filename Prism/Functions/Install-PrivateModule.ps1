@@ -44,10 +44,10 @@ function Install-PrivateModule
             $installedModule = $installedModules | Where-Object SemVer -EQ $module.version 
             if( -not $installedModule )
             {
-                $repoName = $repoByLocation[$module.location]
+                $repoName = $repoByLocation[$module.repositorySourceLocation]
                 if( -not $repoName )
                 {
-                    $msg = "PowerShell repository at ""$($module.location)"" does not exist. Use " +
+                    $msg = "PowerShell repository at ""$($module.repositorySourceLocation)"" does not exist. Use " +
                             '"Get-PSRepository" to see the current list of repositories, "Register-PSRepository" ' +
                             'to add a new repository, or "Set-PSRepository" to update an existing repository.'
                     Write-Error $msg
@@ -75,7 +75,7 @@ function Install-PrivateModule
                 Name = $module.name;
                 Version = $module.version;
                 Path = $modulePath;
-                Location = $module.location;
+                RepositorySourceLocation = $module.repositorySourceLocation;
             }
             $installedModule.pstypenames.Add('Prism.InstalledModule')
             $installedModule | Write-Output

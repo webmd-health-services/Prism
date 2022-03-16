@@ -90,12 +90,12 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'Carbon';
                     version = '2.11.1';
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                 },
                 [pscustomobject]@{
                     name ='NoOp';
                     version = '1.0.0';
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                 }
             );
         })
@@ -113,7 +113,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $script:latestNoOpModule.Version;
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                  }
             )
         })
@@ -135,7 +135,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $expectedModule.Version;
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                 }
             )
         })
@@ -155,7 +155,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'Carbon';
                     version = '2.11.1-alpha732';
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                 }
             )
         })
@@ -175,7 +175,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'Carbon';
                     version = '2.11.1-alpha732';
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                 }
             )
         })
@@ -202,7 +202,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $script:latestNoOpModule.Version;
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                  }
             )
         } 
@@ -224,7 +224,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $script:latestNoOpModule.Version;
-                    location = $script:defaultLocation;
+                    repositorySourceLocation = $script:defaultLocation;
                  }
             )
         })

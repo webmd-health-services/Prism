@@ -24,7 +24,7 @@
                 <PropertyName>LockedVersion</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
-                <PropertyName>Location</PropertyName>
+                <PropertyName>RepositorySourceLocation</PropertyName>
               </TableColumnItem>
             </TableColumnItems>
           </TableRowEntry>
