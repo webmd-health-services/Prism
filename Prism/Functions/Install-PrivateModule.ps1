@@ -20,7 +20,7 @@ function Install-PrivateModule
     {
         if( -not (Test-Path -Path $Configuration.LockPath) )
         {
-            $Configuration | Update-ModuleLock
+            $Configuration | Update-ModuleLock | Format-Table
         }
 
         $repoByLocation = @{}
@@ -71,12 +71,14 @@ function Install-PrivateModule
             }
 
             $modulePath = Join-Path -Path $savePath -ChildPath $module.name | Resolve-Path -Relative
-            [pscustomobject]@{
+            $installedModule = [pscustomobject]@{
                 Name = $module.name;
                 Version = $module.version;
                 Path = $modulePath;
                 Location = $module.location;
-            } | Write-Output
+            }
+            $installedModule.pstypenames.Add('Prism.InstalledModule')
+            $installedModule | Write-Output
         }
     }
 }

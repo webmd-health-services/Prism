@@ -14,14 +14,14 @@ BeforeAll {
     $script:origDebugPref = $Global:DebugPreference
     $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
     $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
-    $script:psgallerylocation =
+    $script:defaultLocation =
         Get-PSRepository -Name $script:latestNoOpModule.Repository | Select-Object -ExpandProperty 'SourceLocation'
     $script:latestNoOpLockFile = @"
 {
     "PSModules": { 
         "name": "NoOp",
         "version": "$($script:latestNoOpModule.Version)",
-        "location": "$($script:psgallerylocation)"
+        "location": "$($script:defaultLocation)"
     }
 }
 "@
@@ -144,7 +144,7 @@ Describe 'prism install' {
         $script:failed = $false
         $Global:Error.Clear()
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
-        New-Item -Path $script:testRoot -ItemType 'Directory'
+        New-Item -Path $script:testRoot -ItemType 'Directory' -ErrorAction Ignore
         Push-Location $script:testRoot
     }
 
@@ -181,8 +181,8 @@ Describe 'prism install' {
         GivenLockFile @"
 {
     "PSModules": [
-        { "name": "Carbon", "version": "2.11.1", "location": "$($script:psgallerylocation)" },
-        { "name": "Carbon", "version": "2.11.0", "location": "$($script:psgallerylocation)" }
+        { "name": "Carbon", "version": "2.11.1", "location": "$($script:defaultLocation)" },
+        { "name": "Carbon", "version": "2.11.0", "location": "$($script:defaultLocation)" }
     ]
 }
 "@
@@ -231,7 +231,7 @@ Describe 'prism install' {
     It 'should install prerelease versions' {
         GivenPrismFile '{}'
         GivenLockFile ('{ "PSModules": { "name": "NoOp", "version": "1.0.0-alpha26", ' +
-                      """location"": ""$($script:psgallerylocation)"" } }")
+                      """location"": ""$($script:defaultLocation)"" } }")
         WhenInstalling
         ThenInstalled @{ 'NoOp' = @('1.0.0-alpha26') }
     }
@@ -239,8 +239,8 @@ Describe 'prism install' {
     It 'should install multiple modules' {
         GivenPrismFile '{}'
         GivenLockFile ("{ ""PSModules"": [ " +
-            "{ ""name"": ""NoOp"", ""version"": ""1.0.0"", ""location"": ""$($script:psgallerylocation)"" }, " +
-            "{ ""name"": ""Carbon"", ""version"": ""2.11.0"", ""location"": ""$($script:psgallerylocation)"" }" +
+            "{ ""name"": ""NoOp"", ""version"": ""1.0.0"", ""location"": ""$($script:defaultLocation)"" }, " +
+            "{ ""name"": ""Carbon"", ""version"": ""2.11.0"", ""location"": ""$($script:defaultLocation)"" }" +
         "] }")
         WhenInstalling
         ThenInstalled @{ 'NoOp' = '1.0.0' ; 'Carbon' = '2.11.0' ; }

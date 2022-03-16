@@ -114,12 +114,24 @@ function Update-ModuleLock
                     location = $moduleToInstall.RepositorySourceLocation;
                 }
                 [void]$locks.Add( $pin )
-                [pscustomobject]@{
-                    'ModuleName' = $pxModule.Name;
-                    'Version' = $versionDesc;
-                    'LockedVersion' = $pin.version;
-                    'Location' = $pin.location;
-                } | Write-Output
+
+                if( -not (Test-Path -Path $Configuration.LockPath) )
+                {
+                    New-Item -Path $Configuration.LockPath `
+                             -ItemType 'File' `
+                             -Value (([pscustomobject]@{}) | ConvertTo-Json) |
+                        Out-Null
+                }
+
+                $moduleLock = [pscustomobject]@{
+                    ModuleName = $pxModule.Name;
+                    Version = $versionDesc;
+                    LockedVersion = $pin.version;
+                    Location = $pin.location;
+                    Path = ($Configuration.LockPath | Resolve-Path -Relative);
+                }
+                $moduleLock.pstypenames.Add('Prism.ModuleLock')
+                $moduleLock | Write-Output
             }
 
             Write-Progress @activity -Status "Saving lock file ""$($Configuration.LockPath)""." -PercentComplete 100
