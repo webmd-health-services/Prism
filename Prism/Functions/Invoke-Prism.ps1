@@ -37,7 +37,7 @@ function Invoke-Prism
     {
         # prism should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
         # to prism module's Modules directory ensures no other package modules get loaded.
-        $pkgManagementModulePath = Join-Path -Path $moduleRoot -ChildPath 'Modules'
+        $pkgManagementModulePath = Join-Path -Path $moduleRoot -ChildPath 'PSModules'
         $env:PSModulePath = $pkgManagementModulePath
         Write-Debug 'AVAILABLE MODULES'
         Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug

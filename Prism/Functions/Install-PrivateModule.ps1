@@ -54,21 +54,23 @@ function Install-PrivateModule
                     continue
                 }
 
-                if( -not (Test-Path -Path $Configuration.PSModulesDirectoryName) )
+                $savePath =
+                    Join-Path -Path $Configuration.File.DirectoryName -ChildPath $Configuration.PSModulesDirectoryName
+
+                if( -not (Test-Path -Path $savePath) )
                 {
-                    New-Item -Path $Configuration.PSModulesDirectoryName -ItemType 'Directory' -Force | Out-Null
+                    New-Item -Path $savePath -ItemType 'Directory' -Force | Out-Null
                 }
 
                 Save-Module -Name $module.name `
-                            -Path $Configuration.PSModulesDirectoryName `
+                            -Path $savePath `
                             -RequiredVersion $module.version `
                             -AllowPrerelease `
                             -Repository $repoName `
                             @pkgMgmtPrefs
             }
 
-            $modulePath = Join-Path -Path (Get-Location).Path -ChildPath $Configuration.PSModulesDirectoryName
-            $modulePath = Join-Path -Path $modulePath -ChildPath $module.name | Resolve-Path -Relative
+            $modulePath = Join-Path -Path $savePath -ChildPath $module.name | Resolve-Path -Relative
             [pscustomobject]@{
                 Name = $module.name;
                 Version = $module.version;

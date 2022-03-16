@@ -1,3 +1,8 @@
+# 0.2.1
+
+* Fixed: modules from prism.json files in sub-directories are installed in the current directory instead of the directory of the prism.json file.
+
+
 # 0.1.3
 
 * Improvements to documentation.

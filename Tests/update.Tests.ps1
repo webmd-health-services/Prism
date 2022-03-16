@@ -8,7 +8,8 @@ BeforeAll {
     $script:testRoot  = $null
     $script:testNum = 0
     $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
-    $script:psgalleryLocation = Get-PSRepository -Name 'PSGallery' | Select-Object -ExpandProperty 'SourceLocation'
+    $script:defaultLocation =
+        Get-PSRepository -Name $script:latestNoOpModule.Repository | Select-Object -ExpandProperty 'SourceLocation'
 
     function GivenPrismFile
     {
@@ -89,12 +90,12 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'Carbon';
                     version = '2.11.1';
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                 },
                 [pscustomobject]@{
                     name ='NoOp';
                     version = '1.0.0';
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                 }
             );
         })
@@ -112,7 +113,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $script:latestNoOpModule.Version;
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                  }
             )
         })
@@ -134,7 +135,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $expectedModule.Version;
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                 }
             )
         })
@@ -154,7 +155,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'Carbon';
                     version = '2.11.1-alpha732';
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                 }
             )
         })
@@ -174,7 +175,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'Carbon';
                     version = '2.11.1-alpha732';
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                 }
             )
         })
@@ -201,7 +202,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $script:latestNoOpModule.Version;
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                  }
             )
         } 
@@ -223,7 +224,7 @@ Describe 'prism update' {
                 [pscustomobject]@{
                     name = 'NoOp';
                     version = $script:latestNoOpModule.Version;
-                    location = $script:psgalleryLocation;
+                    location = $script:defaultLocation;
                  }
             )
         })
