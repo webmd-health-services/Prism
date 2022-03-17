@@ -20,7 +20,7 @@ function Install-PrivateModule
     {
         if( -not (Test-Path -Path $Configuration.LockPath) )
         {
-            $Configuration | Update-ModuleLock
+            $Configuration | Update-ModuleLock | Format-Table
         }
 
         $repoByLocation = @{}
@@ -44,37 +44,41 @@ function Install-PrivateModule
             $installedModule = $installedModules | Where-Object SemVer -EQ $module.version 
             if( -not $installedModule )
             {
-                $repoName = $repoByLocation[$module.location]
+                $repoName = $repoByLocation[$module.repositorySourceLocation]
                 if( -not $repoName )
                 {
-                    $msg = "PowerShell repository at ""$($module.location)"" does not exist. Use " +
+                    $msg = "PowerShell repository at ""$($module.repositorySourceLocation)"" does not exist. Use " +
                             '"Get-PSRepository" to see the current list of repositories, "Register-PSRepository" ' +
                             'to add a new repository, or "Set-PSRepository" to update an existing repository.'
                     Write-Error $msg
                     continue
                 }
 
-                if( -not (Test-Path -Path $Configuration.PSModulesDirectoryName) )
+                $savePath =
+                    Join-Path -Path $Configuration.File.DirectoryName -ChildPath $Configuration.PSModulesDirectoryName
+
+                if( -not (Test-Path -Path $savePath) )
                 {
-                    New-Item -Path $Configuration.PSModulesDirectoryName -ItemType 'Directory' -Force | Out-Null
+                    New-Item -Path $savePath -ItemType 'Directory' -Force | Out-Null
                 }
 
                 Save-Module -Name $module.name `
-                            -Path $Configuration.PSModulesDirectoryName `
+                            -Path $savePath `
                             -RequiredVersion $module.version `
                             -AllowPrerelease `
                             -Repository $repoName `
                             @pkgMgmtPrefs
             }
 
-            $modulePath = Join-Path -Path (Get-Location).Path -ChildPath $Configuration.PSModulesDirectoryName
-            $modulePath = Join-Path -Path $modulePath -ChildPath $module.name | Resolve-Path -Relative
-            [pscustomobject]@{
+            $modulePath = Join-Path -Path $savePath -ChildPath $module.name | Resolve-Path -Relative
+            $installedModule = [pscustomobject]@{
                 Name = $module.name;
                 Version = $module.version;
                 Path = $modulePath;
-                Location = $module.location;
-            } | Write-Output
+                RepositorySourceLocation = $module.repositorySourceLocation;
+            }
+            $installedModule.pstypenames.Add('Prism.InstalledModule')
+            $installedModule | Write-Output
         }
     }
 }

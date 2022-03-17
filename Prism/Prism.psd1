@@ -18,7 +18,7 @@
     RootModule = 'Prism.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.2.0'
+    ModuleVersion = '0.3.0'
 
     # ID used to uniquely identify this module
     GUID = '5b244346-40c9-4a50-a098-8758c19f7f25'
@@ -79,7 +79,10 @@ get modules installed.
     # TypesToProcess = @()
 
     # Format files (.ps1xml) to be loaded when importing this module
-    # FormatsToProcess = @( )
+    FormatsToProcess = @(
+        'Formats\Prism.InstalledModule.format.ps1xml',
+        'Formats\Prism.ModuleLock.format.ps1xml'
+    )
 
     # Modules to import as nested modules of the module specified in RootModule/ModuleToProcess
     # NestedModules = @()

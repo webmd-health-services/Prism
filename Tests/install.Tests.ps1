@@ -13,10 +13,16 @@ BeforeAll {
     $script:origVerbosePref = $Global:VerbosePreference
     $script:origDebugPref = $Global:DebugPreference
     $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
-    $script:psgalleryLocation = Get-PSRepository -Name 'PSGallery' | Select-Object -ExpandProperty 'SourceLocation'
+    $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
+    $script:defaultLocation =
+        Get-PSRepository -Name $script:latestNoOpModule.Repository | Select-Object -ExpandProperty 'SourceLocation'
     $script:latestNoOpLockFile = @"
 {
-    "PSModules": { "name": "NoOp", "version": "1.0.0", "location": "$($script:psgallerylocation)" }
+    "PSModules": { 
+        "name": "NoOp",
+        "version": "$($script:latestNoOpModule.Version)",
+        "repositorySourceLocation": "$($script:defaultLocation)"
+    }
 }
 "@
 
@@ -24,20 +30,38 @@ BeforeAll {
     {
         param(
             [Parameter(Mandatory)]
-            [String] $Contents
+            [String] $Contents,
+            
+            [String] $In
         )
 
-        $Contents | Set-Content -Path 'prism.json' -NoNewline
+        $path = 'prism.json'
+        if( $In )
+        {
+            New-Item -Path $In -ItemType 'Directory' -Force | Out-Null
+            $path = Join-Path -Path $In -ChildPath $path
+        }
+
+        $Contents | Set-Content -Path $path -NoNewline
     }
 
     function GivenLockFile
     {
         param(
             [Parameter(Mandatory)]
-            [String] $Contents
+            [String] $Contents,
+            
+            [String] $In
         )
 
-        $Contents | Set-Content -Path 'prism.lock.json' -NoNewline
+        $path = 'prism.lock.json'
+        if( $In )
+        {
+            New-Item -Path $In -ItemType 'Directory' -Force | Out-Null
+            $path = Join-Path -Path $In -ChildPath $path
+        }
+
+        $Contents | Set-Content -Path $path -NoNewline
     }
 
     function ThenInstalled
@@ -46,14 +70,22 @@ BeforeAll {
             [Parameter(Mandatory)]
             [hashtable] $Module,
 
-            [String] $In = 'PSModules'
+            [String] $In,
+            
+            [String] $UsingDirName = 'PSModules'
         )
+
+        $savePath = $UsingDirName
+        if( $In )
+        {
+            $savePath = Join-Path -Path $In -ChildPath $savePath
+        }
 
         # Make sure *only* the modules we requested are installed.
         $expectedCount = 0
         foreach( $moduleName in $Module.Keys )
         {
-            $modulePath = Join-Path -Path $In -ChildPath $moduleName
+            $modulePath = Join-Path -Path $savePath -ChildPath $moduleName
             foreach( $semver in $Module[$moduleName] )
             {
                 $expectedCount += 1
@@ -76,7 +108,8 @@ BeforeAll {
                 $manifest.SemVer | Should -Be $semver
             }
         }
-        Get-ChildItem -Path "$($In)\*\*\*.psd1" -ErrorAction Ignore |
+
+        Get-ChildItem -Path "$($savePath)\*\*\*.psd1" -ErrorAction Ignore |
             Select-Object -ExpandProperty 'DirectoryName' |
             Select-Object -Unique |
             Should -HaveCount $expectedCount
@@ -91,10 +124,10 @@ BeforeAll {
     {
         [CmdletBinding()]
         param(
+            [hashtable] $WithParameters = @{}
         )
 
-        Invoke-Prism -Command 'install' |
-            Format-Table |
+        Invoke-Prism -Command 'install' @WithParameters |
             Out-String |
             Write-Verbose -Verbose
     }
@@ -111,7 +144,7 @@ Describe 'prism install' {
         $script:failed = $false
         $Global:Error.Clear()
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
-        New-Item -Path $script:testRoot -ItemType 'Directory'
+        New-Item -Path $script:testRoot -ItemType 'Directory' -ErrorAction Ignore
         Push-Location $script:testRoot
     }
 
@@ -138,7 +171,7 @@ Describe 'prism install' {
         'prism.lock.json' | Should -Exist
         $expectedContent = ([pscustomobject]@{
             PSModules = @(
-                [pscustomobject]@{ name = 'NoOp'; version = '1.0.0'; location = $script:psgalleryLocation }
+                [pscustomobject]@{ name = 'NoOp'; version = '1.0.0'; repositorySourceLocation = $script:defaultLocation }
             )}) | ConvertTo-Json
         Get-Content -Path 'prism.lock.json' -Raw | Should -Be $expectedContent
     }
@@ -148,8 +181,8 @@ Describe 'prism install' {
         GivenLockFile @"
 {
     "PSModules": [
-        { "name": "Carbon", "version": "2.11.1", "location": "$($script:psgallerylocation)" },
-        { "name": "Carbon", "version": "2.11.0", "location": "$($script:psgallerylocation)" }
+        { "name": "Carbon", "version": "2.11.1", "repositorySourceLocation": "$($script:defaultLocation)" },
+        { "name": "Carbon", "version": "2.11.0", "repositorySourceLocation": "$($script:defaultLocation)" }
     ]
 }
 "@
@@ -161,16 +194,16 @@ Describe 'prism install' {
         GivenPrismFile '{}'
         # Has to be the same version as used by Prism internally.
         $pkgMgmtVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\Modules\PackageManagement') |
+            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\PSModules\PackageManagement') |
             Select-Object -ExpandProperty 'Name'
         $psGetVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\Modules\PowerShellGet') |
+            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\PSModules\PowerShellGet') |
             Select-Object -ExpandProperty 'Name'
         GivenLockFile @"
 {
     "PSModules": [
-        { "name": "PackageManagement", "version": "$($pkgMgmtVersion)", "location": "$($script:psgalleryLocation)" },
-        { "name": "PowerShellGet", "version": "$($psGetVersion)", "location": "$($script:psgalleryLocation)" }
+        { "name": "PackageManagement", "version": "$($pkgMgmtVersion)", "repositorySourceLocation": "$($script:defaultLocation)" },
+        { "name": "PowerShellGet", "version": "$($psGetVersion)", "repositorySourceLocation": "$($script:defaultLocation)" }
     ]
 }
 "@
@@ -192,13 +225,13 @@ Describe 'prism install' {
 '@
         GivenLockFile $script:latestNoOpLockFile
         WhenInstalling
-        ThenInstalled @{ 'NoOp' = '1.0.0' } -In 'Modules'
+        ThenInstalled @{ 'NoOp' = '1.0.0' } -UsingDirName 'Modules'
     }
 
     It 'should install prerelease versions' {
         GivenPrismFile '{}'
         GivenLockFile ('{ "PSModules": { "name": "NoOp", "version": "1.0.0-alpha26", ' +
-                      """location"": ""$($script:psgallerylocation)"" } }")
+                      """repositorySourceLocation"": ""$($script:defaultLocation)"" } }")
         WhenInstalling
         ThenInstalled @{ 'NoOp' = @('1.0.0-alpha26') }
     }
@@ -206,8 +239,8 @@ Describe 'prism install' {
     It 'should install multiple modules' {
         GivenPrismFile '{}'
         GivenLockFile ("{ ""PSModules"": [ " +
-            "{ ""name"": ""NoOp"", ""version"": ""1.0.0"", ""location"": ""$($script:psgallerylocation)"" }, " +
-            "{ ""name"": ""Carbon"", ""version"": ""2.11.0"", ""location"": ""$($script:psgallerylocation)"" }" +
+            "{ ""name"": ""NoOp"", ""version"": ""1.0.0"", ""repositorySourceLocation"": ""$($script:defaultLocation)"" }, " +
+            "{ ""name"": ""Carbon"", ""version"": ""2.11.0"", ""repositorySourceLocation"": ""$($script:defaultLocation)"" }" +
         "] }")
         WhenInstalling
         ThenInstalled @{ 'NoOp' = '1.0.0' ; 'Carbon' = '2.11.0' ; }
@@ -259,5 +292,12 @@ Describe 'prism install' {
         $output |
             Where-Object { $_ -like '*PackagePRovider::FindPackage with name NoOp' } |
             Should -BeNullOrEmpty
+    }
+
+    It 'should install in same directory as prism JSON file' {
+        GivenPrismFile '{}' -In 'dir1\dir2'
+        GivenLockFile $script:latestNoOpLockFile -In 'dir1\dir2'
+        WhenInstalling -WithParameters @{ Recurse = $true }
+        ThenInstalled @{ 'NoOp' = '1.0.0' } -In 'dir1\dir2'
     }
 }
