@@ -4,7 +4,11 @@ Build:
     Path: Prism\Prism.psd1
     Prerelease:
     - "*/*": alpha$(WHISKEY_BUILD_NUMBER)
-    - develop: rc$(WHISKEY_BUILD_NUMBER)
+    - prerelease: rc$(WHISKEY_BUILD_NUMBER)
+
+- Version:
+    OnlyBy: BuildServer
+    Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))
 
 # Update the AppVeyor build/version number.
 - Exec:
@@ -55,7 +59,7 @@ Build:
     DestinationDirectory: Prism
 
 - Zip:
-    ArchivePath: .output\Prism-$(WHISKEY_SEMVER2).zip
+    ArchivePath: .output\Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
     Path: 
     - Prism
     Exclude:
@@ -65,7 +69,7 @@ Build:
 - Exec:
     OnlyBy: BuildServer
     Path: appveyor
-    Argument: [ 'PushArtifact', '.output/Prism-$(WHISKEY_SEMVER2).zip', '-DeploymentName', 'GitHub' ]
+    Argument: [ 'PushArtifact', '.output/Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip', '-DeploymentName', 'GitHub' ]
 
 
 - PublishPowerShellModule:
