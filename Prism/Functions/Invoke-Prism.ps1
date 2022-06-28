@@ -51,14 +51,10 @@ function Invoke-Prism
 
         $pkgMgmtPrefs = Get-PackageManagementPreference
 
-        # prism should ship with its own private copies of PackageManagement and PowerShellGet. Setting PSModulePath
-        # to prism module's Modules directory ensures no other package modules get loaded.
-        $pkgManagementModulePath = Join-Path -Path $moduleRoot -ChildPath 'PSModules'
-        $env:PSModulePath = $pkgManagementModulePath
         Write-Debug 'AVAILABLE MODULES'
         Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
-        Import-Module -Name 'PackageManagement' @pkgMgmtPrefs
-        Import-Module -Name 'PowerShellGet' @pkgMgmtPrefs
+        Import-Module -Name 'PackageManagement' @pkgMgmtPrefs -ErrorAction Stop
+        Import-Module -Name 'PowerShellGet' @pkgMgmtPrefs -ErrorAction Stop
         Write-Debug 'IMPORTED MODULES'
         Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
 
@@ -148,7 +144,7 @@ function Invoke-Prism
 
                 # This makes it so we can use PowerShell's module cmdlets as much as possible.
                 $privateModulePath =  Join-Path -Path $prismJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
-                $env:PSModulePath = "$($privateModulePath)$([IO.Path]::PathSeparator)$($pkgManagementModulePath)"
+                $env:PSModulePath = $privateModulePath
 
                 switch( $Command )
                 {

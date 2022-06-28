@@ -15,6 +15,7 @@ get modules installed.
 
 * Windows PowerShell 5.1 and .NET 4.6.1+
 * PowerShell 6+ on Windows, Linux, or macOS
+* PackageManagement and PowerShellGet modules
 
 
 # Installing

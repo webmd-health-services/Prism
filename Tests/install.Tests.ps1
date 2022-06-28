@@ -192,23 +192,16 @@ Describe 'prism install' {
 
     It 'should install PackageManagement and PowerShellGet' {
         GivenPrismFile '{}'
-        # Has to be the same version as used by Prism internally.
-        $pkgMgmtVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\PSModules\PackageManagement') |
-            Select-Object -ExpandProperty 'Name'
-        $psGetVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\PSModules\PowerShellGet') |
-            Select-Object -ExpandProperty 'Name'
         GivenLockFile @"
 {
     "PSModules": [
-        { "name": "PackageManagement", "version": "$($pkgMgmtVersion)", "repositorySourceLocation": "$($script:defaultLocation)" },
-        { "name": "PowerShellGet", "version": "$($psGetVersion)", "repositorySourceLocation": "$($script:defaultLocation)" }
+        { "name": "PackageManagement", "version": "1.4.7", "repositorySourceLocation": "$($script:defaultLocation)" },
+        { "name": "PowerShellGet", "version": "2.2.5", "repositorySourceLocation": "$($script:defaultLocation)" }
     ]
 }
 "@
         WhenInstalling
-        ThenInstalled @{ 'PackageManagement' = $pkgMgmtVersion ; 'PowerShellGet' = $psGetVersion ; }
+        ThenInstalled @{ 'PackageManagement' = '1.4.7' ; 'PowerShellGet' = '2.2.5' ; }
     }
 
     It 'should pass and install to custom PSModules directory' {
