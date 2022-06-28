@@ -29,10 +29,6 @@ Build:
     TextSeparator: "$(NewLine)$(NewLine)"
 
 - PowerShell:
-    ExceptDuring: Clean
-    Path: init.ps1
-
-- PowerShell:
     OnlyDuring: Clean
     Path: reset.ps1
 

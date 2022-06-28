@@ -190,20 +190,6 @@ Describe 'prism install' {
         ThenInstalled @{ 'Carbon' = @('2.11.1', '2.11.0') }
     }
 
-    It 'should install PackageManagement and PowerShellGet' {
-        GivenPrismFile '{}'
-        GivenLockFile @"
-{
-    "PSModules": [
-        { "name": "PackageManagement", "version": "1.4.7", "repositorySourceLocation": "$($script:defaultLocation)" },
-        { "name": "PowerShellGet", "version": "2.2.5", "repositorySourceLocation": "$($script:defaultLocation)" }
-    ]
-}
-"@
-        WhenInstalling
-        ThenInstalled @{ 'PackageManagement' = '1.4.7' ; 'PowerShellGet' = '2.2.5' ; }
-    }
-
     It 'should pass and install to custom PSModules directory' {
         GivenPrismFile @'
         {
