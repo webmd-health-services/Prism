@@ -6,6 +6,10 @@
   containing a prism.json file.
 * Added ability to pipe prism.json files and/or directories containing prism.json files to prism.
 
+## Fixed
+
+* Fixed: `prism install` always installs modules, even if they are already installed.
+
 
 # 0.3.0
 

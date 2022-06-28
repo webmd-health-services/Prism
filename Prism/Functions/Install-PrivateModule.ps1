@@ -32,7 +32,7 @@ function Install-PrivateModule
         {
             $installedModules =
                 Get-Module -Name $module.name -ListAvailable -ErrorAction Ignore |
-                Add-Member -Name 'SemVer' -MemberType ScriptProperty -Value {
+                Add-Member -Name 'SemVer' -MemberType ScriptProperty -PassThru -Value {
                     $prerelease = $this.PrivateData['PSData']['PreRelease']
                     if( $prerelease )
                     {
@@ -40,6 +40,9 @@ function Install-PrivateModule
                     }
                     return "$($this.Version)$($prerelease)"
                 }
+
+            $savePath =
+                Join-Path -Path $Configuration.File.DirectoryName -ChildPath $Configuration.PSModulesDirectoryName
 
             $installedModule = $installedModules | Where-Object SemVer -EQ $module.version 
             if( -not $installedModule )
@@ -53,9 +56,6 @@ function Install-PrivateModule
                     Write-Error $msg
                     continue
                 }
-
-                $savePath =
-                    Join-Path -Path $Configuration.File.DirectoryName -ChildPath $Configuration.PSModulesDirectoryName
 
                 if( -not (Test-Path -Path $savePath) )
                 {

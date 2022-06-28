@@ -300,4 +300,22 @@ Describe 'prism install' {
         WhenInstalling -WithParameters @{ Recurse = $true }
         ThenInstalled @{ 'NoOp' = '1.0.0' } -In 'dir1\dir2'
     }
+
+    It 'should not reinstall if already installed' {
+        GivenPrismFile @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0"
+                }
+            ]
+        }
+"@
+        WhenInstalling
+        ThenInstalled @{ 'NoOp' = '1.0.0' }
+        Mock -CommandName 'Save-Module' -ModuleName 'Prism'
+        WhenInstalling
+        Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Prism' -Times 0 -Exactly
+    }
 }
