@@ -59,6 +59,8 @@ for:
       }
       finally
       {
+          Get-Module | Format-Table -Auto | Out-String
+          Get-Module 'PackageManagement', 'PowerShellGet' -ListAvailable | Format-Table -Auto | Out-String
           $Global:Error | Format-List * -Force
       }
 
@@ -75,5 +77,7 @@ for:
       }
       finally
       {
+          Get-Module | Format-Table -Auto | Out-String
+          Get-Module 'PackageManagement', 'PowerShellGet' -ListAvailable | Format-Table -Auto | Out-String
           $Global:Error | Format-List * -Force
       }

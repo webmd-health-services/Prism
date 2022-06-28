@@ -35,19 +35,28 @@ $job = Start-Job {
                               -PackageManagementProvider $psGalleryRepo.PackageManagementProvider
     }
 
-    [Version] $psGetVersion = '2.2.5'
-    if( -not (Get-Module -Name 'PowerShellGet' -ListAvailable | Where-Object 'Version' -ge $psGetVersion) )
+    $maxPkgMgmtVersion = '1.4.7'
+    [Version] $minPkgMgmtVersion = '1.4.7'  # '1.3.2' once Whiskey is updated to support this as minimum version.
+    if( -not (Get-Module -Name 'PackageManagement' -ListAvailable | Where-Object 'Version' -ge $minPkgMgmtVersion) )
     {
+        Write-Information -MessageData "Installing PowerShell module PackageManagement $($maxPkgMgmtVersion)."
+        Install-Module -Name 'PackageManagement' -RequiredVersion $maxPkgMgmtVersion -Repository $repoToUse -AllowClobber -Force
+    }
+
+    [Version] $minPsGetVersion = '2.2.5'  # '2.1.3' once Whiskey is updated to support this as minimum version.
+    if( -not (Get-Module -Name 'PowerShellGet' -ListAvailable | Where-Object 'Version' -ge $minPsGetVersion) )
+    {
+        $psGetVersion = '2.2.5'
         Write-Information -MessageData "Installing PowerShell module PowerShellGet $($psGetVersion)."
         Install-Module -Name 'PowerShellGet' -RequiredVersion $psGetVersion -Repository $repoToUse -AllowClobber -Force
     }
 
-    [Version] $pkgMgmtVersion = '1.4.7'
-    if( -not (Get-Module -Name 'PackageManagement' -ListAvailable | Where-Object 'Version' -ge $pkgMgmtVersion) )
-    {
-        Write-Information -MessageData "Installing PowerShell module PackageManagement $($pkgMgmtVersion)."
-        Install-Module -Name 'PackageManagement' -RequiredVersion $pkgMgmtVersion -Repository $repoToUse -AllowClobber -Force
-    }
+    Get-Module -Name 'PackageManagement' -ListAvailable |
+        Where-Object Version -gt $maxPkgMgmtVersion |
+        ForEach-Object {
+            Write-Information -MessageData "Uninstalling PowerShell module $($_.Name) $($_.Version)."
+            Uninstall-Module -Name $_.Name -RequiredVersion $_.Version -Force
+        }
 }
 
 if( (Get-Command -Name 'Receive-Job' -ParameterName 'AutoRemoveJob') )
@@ -59,3 +68,6 @@ else
     $job | Wait-Job | Receive-Job
     $job | Remove-Job
 }
+
+Get-Module | Format-Table -Auto | Out-String
+Get-Module 'PackageManagement', 'PowerShellGet' -ListAvailable | Format-Table -Auto | Out-String

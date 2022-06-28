@@ -298,4 +298,57 @@ Describe 'prism install' {
         WhenInstalling
         Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Prism' -Times 0 -Exactly
     }
+
+    It 'should handle missing forward slash on PSGallery location on older platforms' {
+        GivenPrismFile @'
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.*"
+                }
+            ]
+        }
+'@
+        GivenLockFile @'
+{
+    "PSModules":  [
+        {
+            "name":  "NoOp",
+            "version":  "1.0.0",
+            "repositorySourceLocation":  "https://www.powershellgallery.com/api/v2"
+        }
+    ]
+}
+'@
+        WhenInstalling
+        ThenInstalled @{ 'NoOp' = '1.0.0' }
+    }
+
+
+    It 'should handle extra forward slash on PSGallery location' {
+        GivenPrismFile @'
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.*"
+                }
+            ]
+        }
+'@
+        GivenLockFile @'
+{
+    "PSModules":  [
+        {
+            "name":  "NoOp",
+            "version":  "1.0.0",
+            "repositorySourceLocation":  "https://www.powershellgallery.com/api/v2/"
+        }
+    ]
+}
+'@
+        WhenInstalling
+        ThenInstalled @{ 'NoOp' = '1.0.0' }
+    }
 }

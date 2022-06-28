@@ -13,6 +13,9 @@
 ## Fixed
 
 * Fixed: `prism install` always installs modules, even if they are already installed.
+* Fixed: module install fails if lock file generated on Windows 10/Server 2016 or later and install is on Windows
+  8.1/Server 2012 R2 and vice-versa. (PSGallery repository's URL ends with a forward slash on
+  Windows 8.1/Server 2012 R2, but ends with no forward slash on later operating systems.)
 
 
 # 0.3.0
