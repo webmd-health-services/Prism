@@ -24,7 +24,15 @@ function Install-PrivateModule
         }
 
         $repoByLocation = @{}
-        Get-PSRepository | ForEach-Object { $repoByLocation[$_.SourceLocation] = $_.Name }
+        Get-PSRepository |
+            ForEach-Object {
+                $repoUrl = $_.SourceLocation
+                $repoByLocation[$repoUrl] = $_.Name
+
+                # Ignore slashes at the end of URLs.
+                $trimmedRepoUrl = $repoUrl.TrimEnd('/')
+                $repoByLocation[$trimmedRepoUrl] = $_.Name
+            }
 
         $locks = Get-Content -Path $Configuration.LockPath | ConvertFrom-Json
         $locks | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() -ErrorAction Ignore
@@ -47,7 +55,14 @@ function Install-PrivateModule
             $installedModule = $installedModules | Where-Object SemVer -EQ $module.version 
             if( -not $installedModule )
             {
-                $repoName = $repoByLocation[$module.repositorySourceLocation]
+                $sourceUrl = $module.repositorySourceLocation
+                $repoName = $repoByLocation[$sourceUrl]
+                if( -not $repoName )
+                {
+                    # Ignore slashes at the end of URLs.
+                    $sourceUrl = $sourceUrl.TrimEnd('/')
+                }
+                $repoName = $repoByLocation[$sourceUrl]
                 if( -not $repoName )
                 {
                     $msg = "PowerShell repository at ""$($module.repositorySourceLocation)"" does not exist. Use " +
