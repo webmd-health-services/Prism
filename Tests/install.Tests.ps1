@@ -129,7 +129,7 @@ BeforeAll {
 
         Invoke-Prism -Command 'install' @WithParameters |
             Out-String |
-            Write-Verbose -Verbose
+            Write-Verbose
     }
 }
 
@@ -253,7 +253,7 @@ Describe 'prism install' {
         $env:PRISM_DISABLE_DEEP_VERBOSE = 'True'
         $Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 4>&1
-        $output | Write-Verbose -Verbose
+        $output | Write-Verbose
         # From Import-Module.
         $output |
             Where-Object { $_ -like 'Loading module from path ''*PackageManagement.psd1''.' } |
@@ -278,7 +278,8 @@ Describe 'prism install' {
         $env:PRISM_DISABLE_DEEP_DEBUG = 'True'
         $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 5>&1
-        $output | Write-Verbose -Verbose
+        $output | Write-Verbose
+        
         # Import-Module doesn't output any debug messages.
         # Save-Module does.
         # From PowerShellGet. Can't find PackageManagement-only debug messages.
