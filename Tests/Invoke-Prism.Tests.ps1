@@ -38,7 +38,7 @@ BeforeAll {
         )
 
         $failed | Should -BeTrue
-        $Global:Error[-1] | Should -Match $WithErrorMatching
+        ThenWroteError -ThatMatches $WithErrorMatching
     }
 
     function ThenRanCommand
@@ -129,7 +129,18 @@ BeforeAll {
             }
         }
     }
-    
+
+    function ThenWroteError
+    {
+        param(
+            [Parameter(Mandatory)]
+            [String] $ThatMatches
+        )
+
+        $Global:Error | Should -Not -BeNullOrEmpty
+        $Global:Error | Should -Match $ThatMatches
+    }
+
     function WhenInvokingCommand
     {
         [CmdletBinding()]
@@ -137,15 +148,25 @@ BeforeAll {
             [Parameter(Mandatory)]
             [String] $Named,
 
-            [hashtable] $WithParameters = @{}
+            [hashtable] $WithParameters = @{},
+
+            [Object] $WithPipelineInput
         )
 
         Mock -CommandName 'Install-PrivateModule' -ModuleName 'Prism'
         Mock -CommandName 'Update-ModuleLock' -ModuleName 'Prism'
 
+        $WithParameters['Command'] = $Named
         try 
         {
-            Invoke-Prism -Command $Named @WithParameters
+            if( $WithPipelineInput )
+            {
+                $WithPipelineInput | Invoke-Prism @WithParameters
+            }
+            else
+            {
+                Invoke-Prism @WithParameters
+            }
         }
         catch
         {
@@ -257,4 +278,73 @@ Describe 'Invoke-Prism' {
         ThenFailed "No prism\.json file found"
     }
 
+    It 'should use prism.json file given by Path parameter' {
+        GivenPrismFile 'prism.json'
+        GivenPrismFile 'dir1\prism.json'
+        GivenPrismFile 'dir1\module.json'
+        WhenInvokingCommand 'install' -WithParameter @{ 'Path' = 'dir1\module.json' }
+        ThenRanCommand 'install' -Passing @{ Path = 'dir1\module.json' ; LockPath = 'dir1\module.lock.json' }
+    }
+
+    It 'should use prism.json file in directory given by Path parameter' {
+        GivenPrismFile 'prism.json'
+        GivenPrismFile 'dir1\prism.json'
+        GivenPrismFile 'dir1\dir2\prism.json'
+        WhenInvokingCommand 'install' -WithParameter @{ 'Path' = 'dir1' }
+        ThenRanCommand 'install' -Passing @{ Path = 'dir1\prism.json' ; LockPath = 'dir1\prism.lock.json' }
+    }
+
+    It 'should use all prism.json files found recursively under directory given by Path parameter' {
+        GivenPrismFile 'prism.json'
+        GivenPrismFile 'dir1\prism.json'
+        GivenPrismFile 'dir1\dir2\prism.json'
+        WhenInvokingCommand 'install' -WithParameter @{ 'Path' = 'dir1' ; Recurse = $true ; }
+        ThenRanCommand 'install' -Passing @(
+            @{ Path = 'dir1\prism.json' ; LockPath = 'dir1\prism.lock.json' },
+            @{ Path = 'dir1\dir2\prism.json' ; LockPath = 'dir1\dir2\prism.lock.json' }
+        )
+    }
+
+    It 'should fail if Path does not exist' {
+        $parameters = @{ 'Path' = 'do_not_exist.json' }
+        WhenInvokingCommand -Named 'install' -WithParameter $parameters -ErrorAction SilentlyContinue
+        ThenWroteError '"do_not_exist.json" does not exist'
+    }
+
+    It 'should allow piping prism.json files' {
+        GivenPrismFile 'prism.json'
+        GivenPrismFile 'dir1\prism.json'
+        GivenPrismFile 'dir1\dir2\prism.json'
+        WhenInvokingCommand 'install' -WithPipelineInput (Get-ChildItem -Path '.' -Filter 'prism.json' -Recurse)
+        ThenRanCommand 'install' -Passing @(
+            @{ Path = 'prism.json' ; LockPath = 'prism.lock.json' },
+            @{ Path = 'dir1\prism.json' ; LockPath = 'dir1\prism.lock.json' },
+            @{ Path = 'dir1\dir2\prism.json' ; LockPath = 'dir1\dir2\prism.lock.json' }
+        )
+    }
+
+    It 'should allow piping directories' {
+        GivenPrismFile 'prism.json'
+        GivenPrismFile 'dir1\prism.json'
+        GivenPrismFile 'dir1\dir2\prism.json'
+        WhenInvokingCommand 'install' -WithPipelineInput (Get-Item -Path 'dir1'),(Get-item -Path 'dir1\dir2')
+        ThenRanCommand 'install' -Passing @(
+            @{ Path = 'dir1\prism.json' ; LockPath = 'dir1\prism.lock.json' },
+            @{ Path = 'dir1\dir2\prism.json' ; LockPath = 'dir1\dir2\prism.lock.json' }
+        )
+    }
+
+    It 'should allow custom-named prism.json file' {
+        GivenPrismFile 'fubar.json'
+        WhenInvokingCommand 'install' -WithParameter @{ FileName = 'fubar.json' }
+        ThenRanCommand 'install' -Passing @(
+            @{ Path = 'fubar.json' ; LockPath = 'fubar.lock.json' }
+        )
+    }
+
+    It 'should ignore prism.json when using custom named prism.json file' {
+        GivenPrismFile 'prism.json'
+        WhenInvokingCommand 'install' -WithParameter @{ FileName = 'fubar.json' } -ErrorAction SilentlyContinue
+        ThenFailed -WithErrorMatching 'No fubar\.json file found'
+    }
 }

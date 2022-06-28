@@ -1,3 +1,20 @@
+# 0.4.0
+
+## Added
+
+* Added "Path" parameter to all prism commands, which can be the path to a specific prism.json file, or a directory
+  containing a prism.json file.
+* Added ability to pipe prism.json files and/or directories containing prism.json files to prism.
+
+## Changed
+
+* Prism now requires PackageManagement and PowerShellGet to be pre-installed.
+
+## Fixed
+
+* Fixed: `prism install` always installs modules, even if they are already installed.
+
+
 # 0.3.0
 
 ## Upgrade Instructions

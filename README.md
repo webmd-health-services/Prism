@@ -15,6 +15,7 @@ get modules installed.
 
 * Windows PowerShell 5.1 and .NET 4.6.1+
 * PowerShell 6+ on Windows, Linux, or macOS
+* PackageManagement and PowerShellGet modules
 
 
 # Installing
@@ -56,9 +57,9 @@ Then, open a PowerShell prompt in the same directory as the "prism.json" file an
 prism install
 ```
 
-When Prism is done running, there should be a "PSModules" directory in the current directory that contains all the
-private modules listed in the "prism.json" file. There will also be a "prism.lock.json" file, which should also get
-checked into source control with the "prism.json" file.
+When Prism is done running, there should be a PSModules directory in the current directory that contains all the
+private modules listed in the prism.json file. There will also be a prism.lock.json file, which should also get
+checked into source control along with the prism.json file.
 
 
 # Adding to Builds
@@ -68,7 +69,7 @@ separately:
 
 ```powershell
 Find-Module -Name 'Prism' | Select-Object -First 1 | Install-Module -Scope CurrentUser -Force
-prism install | Format-Table
+prism install
 ```
 
 Use the `-Force` switch with `Install-Module` so the module gets installed even if the repository it is being installed
@@ -77,9 +78,6 @@ from is untrusted.
 The `Select-Object -First 1` command is included in case your build server has multiple PowerShell repositories defined.
 You can omit it if there is only one, or use the `Find-Module` command's `Repository` parameter to import from a
 specific repository.
-
-The `prism install` command returns module objects (returned by `Get-Module`). Some build systems display those as a
-list instead of a table, so we pipe the install output to `Format-Table` to make it look better in build output.
 
 Make sure you've run `prism install` at least once, and check the file it creates, `prism.lock.json`, into your
 repository. If you don't, the `prism install` command on the server will always generate the lock file, which makes
@@ -90,15 +88,14 @@ builds take longer.
 
 ## Overview
 
-Each module object in the "prism.json" file can have three properties, `Name` and `Version`. Only `Name` is mandatory,
-and it must be the name of the module to install. The same module may be listed multiple times, if you need multiple
-versions.
+Each module object in the prism.json file must have a `Name` property, which is the name of the module to install. Each
+object can also have a `Version` property, which is the version to install. Wildcards are supported, so you can pin to
+the latest major, minor, or patch versions of a module. The default is to install the latest version of a module.
 
 ## Module Version
 
-The `Version` property is optional. If omitted, Prism will always install the latest version. Use wildcards to pin to
-specific minor, patch, or prerelease versions of a module. Prism assumes modules use
-[Semantic Versioning](https://semver.org).
+The `Version` property is optional. If omitted, Prism will install the latest version. Use wildcards to pin to specific
+minor, patch, or prerelease versions of a module. Prism assumes modules use [Semantic Versioning](https://semver.org).
 
 For example, if a module has versions `5.2.0-rc1`, `5.1.1`, `5.1.0`, `5.1.0-rc1`, `5.1.0-beta1`, `5.0.0`, `5.0.0-rc1`,
 `4.10.1`, `4.10.0`, and `4.9.0`:
@@ -220,19 +217,6 @@ set to `ALL`. To fix this, you can:
 * If `$PSModuleAutoloadingPreference` is set to `MODULEQUALIFIED`, run `Prism\prism install` instead.
 * If `$PSModuleAutoloadingPreference` is set to `NONE`, import Prism first, `Import-Module Prism` then run
 `prism install`.
-
-
-# FAQ
-
-## Why didn't you use PSDepends?
-
-We tried to reach out to the author of PSDepends to see if they would take feature enhancements and bug requests, but
-we never heard back.
-
-## Why isn't this called "PSGet"/"psget"?
-
-The "PS" prefix is reserved by the PowerShell team. We thought the "x" in "Prism" was a cool replacement. Our hope is
-that the team working on the PowerShellGet module sees our work and creates a similar "psget" command in PowerShellGet.
 
 
 # Bug Reports and Feature Requests

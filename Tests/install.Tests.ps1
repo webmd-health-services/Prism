@@ -129,7 +129,7 @@ BeforeAll {
 
         Invoke-Prism -Command 'install' @WithParameters |
             Out-String |
-            Write-Verbose -Verbose
+            Write-Verbose
     }
 }
 
@@ -190,27 +190,6 @@ Describe 'prism install' {
         ThenInstalled @{ 'Carbon' = @('2.11.1', '2.11.0') }
     }
 
-    It 'should install PackageManagement and PowerShellGet' {
-        GivenPrismFile '{}'
-        # Has to be the same version as used by Prism internally.
-        $pkgMgmtVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\PSModules\PackageManagement') |
-            Select-Object -ExpandProperty 'Name'
-        $psGetVersion = 
-            Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath '..\Prism\PSModules\PowerShellGet') |
-            Select-Object -ExpandProperty 'Name'
-        GivenLockFile @"
-{
-    "PSModules": [
-        { "name": "PackageManagement", "version": "$($pkgMgmtVersion)", "repositorySourceLocation": "$($script:defaultLocation)" },
-        { "name": "PowerShellGet", "version": "$($psGetVersion)", "repositorySourceLocation": "$($script:defaultLocation)" }
-    ]
-}
-"@
-        WhenInstalling
-        ThenInstalled @{ 'PackageManagement' = $pkgMgmtVersion ; 'PowerShellGet' = $psGetVersion ; }
-    }
-
     It 'should pass and install to custom PSModules directory' {
         GivenPrismFile @'
         {
@@ -260,7 +239,7 @@ Describe 'prism install' {
         $env:PRISM_DISABLE_DEEP_VERBOSE = 'True'
         $Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 4>&1
-        $output | Write-Verbose -Verbose
+        $output | Write-Verbose
         # From Import-Module.
         $output |
             Where-Object { $_ -like 'Loading module from path ''*PackageManagement.psd1''.' } |
@@ -285,7 +264,8 @@ Describe 'prism install' {
         $env:PRISM_DISABLE_DEEP_DEBUG = 'True'
         $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 5>&1
-        $output | Write-Verbose -Verbose
+        $output | Write-Verbose
+        
         # Import-Module doesn't output any debug messages.
         # Save-Module does.
         # From PowerShellGet. Can't find PackageManagement-only debug messages.
@@ -299,5 +279,23 @@ Describe 'prism install' {
         GivenLockFile $script:latestNoOpLockFile -In 'dir1\dir2'
         WhenInstalling -WithParameters @{ Recurse = $true }
         ThenInstalled @{ 'NoOp' = '1.0.0' } -In 'dir1\dir2'
+    }
+
+    It 'should not reinstall if already installed' {
+        GivenPrismFile @"
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.0.0"
+                }
+            ]
+        }
+"@
+        WhenInstalling
+        ThenInstalled @{ 'NoOp' = '1.0.0' }
+        Mock -CommandName 'Save-Module' -ModuleName 'Prism'
+        WhenInstalling
+        Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Prism' -Times 0 -Exactly
     }
 }

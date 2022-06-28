@@ -18,7 +18,7 @@
     RootModule = 'Prism.psm1'
 
     # Version number of this module.
-    ModuleVersion = '0.3.0'
+    ModuleVersion = '0.4.0'
 
     # ID used to uniquely identify this module
     GUID = '5b244346-40c9-4a50-a098-8758c19f7f25'
@@ -118,7 +118,20 @@ get modules installed.
         PSData = @{
 
             # Tags applied to this module. These help with module discovery in online galleries.
-            Tags = @( 'Desktop', 'Core' )
+            Tags = @(
+                'module',
+                'management',
+                'manager',
+                'psget',
+                'PowerShellGet',
+                'oneget',
+                'nuget',
+                'npm',
+                'psmodules',
+                'psmodulepath',
+                'Desktop',
+                'Core'
+            )
 
             # A URL to the license for this module.
             LicenseUri = 'http://www.apache.org/licenses/LICENSE-2.0'
