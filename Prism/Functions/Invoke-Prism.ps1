@@ -53,8 +53,18 @@ function Invoke-Prism
 
         Write-Debug 'AVAILABLE MODULES'
         Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
-        Import-Module -Name 'PackageManagement' @pkgMgmtPrefs -ErrorAction Stop
-        Import-Module -Name 'PowerShellGet' @pkgMgmtPrefs -ErrorAction Stop
+        Import-Module -Name 'PackageManagement' `
+                      -MinimumVersion '1.3.2' `
+                      -MaximumVersion '1.4.7' `
+                      -Global `
+                      -ErrorAction Stop `
+                      @pkgMgmtPrefs
+        Import-Module -Name 'PowerShellGet' `
+                      -MinimumVersion '2.0.0' `
+                      -MaximumVersion '2.2.5' `
+                      -Global `
+                      -ErrorAction Stop `
+                      @pkgMgmtPrefs
         Write-Debug 'IMPORTED MODULES'
         Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
 

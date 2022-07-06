@@ -41,6 +41,19 @@ BeforeAll {
         ThenWroteError -ThatMatches $WithErrorMatching
     }
 
+    function ThenPackageManagementModulesImported
+    {
+        Get-Module -Name 'PackageManagement' |
+            Where-Object 'Version' -ge ([Version]'1.3.2') |
+            Where-Object 'Version' -le ([Version]'1.4.7') |
+            Should -Not -BeNullOrEmpty -Because 'should import PackageManagement 1.3.2 - 1.4.7'
+
+        Get-Module -Name 'PowerShellGet' |
+            Where-Object 'Version' -ge ([Version]'2.0.0') |
+            Where-Object 'Version' -le ([Version]'2.2.5') |
+            Should -Not -BeNullOrEmpty -Because 'should import PowerShellGet 2.0.0 - 2.2.5'
+    }
+
     function ThenRanCommand
     {
         [CmdletBinding()]
@@ -190,6 +203,7 @@ Describe 'Invoke-Prism' {
         New-Item -Path $script:testRoot -ItemType 'Directory'
         Push-Location $script:testRoot
         $Global:Error.Clear()
+        Remove-Module -Name 'PowerShellGet', 'PackageManagement' -Force -ErrorAction Ignore
     }
 
     AfterEach {
@@ -208,6 +222,7 @@ Describe 'Invoke-Prism' {
             GivenPrismFile 'dir1\prism.json'
             WhenInvokingCommand $command
             ThenRanCommand $command -Passing @{ 'Path' = 'prism.json'; 'LockPath' = 'prism.lock.json' }
+            ThenPackageManagementModulesImported
         }
 
         It 'should pass all configuration files' {
@@ -223,6 +238,7 @@ Describe 'Invoke-Prism' {
                 @{ Path = 'dir1\dir2\prism.json' ; LockPath = 'dir1\dir2\prism.lock.json' },
                 @{ Path = 'dir3\dir4\prism.json' ; LockPath = 'dir3\dir4\prism.lock.json' }
             )
+            ThenPackageManagementModulesImported
         }
     }
 

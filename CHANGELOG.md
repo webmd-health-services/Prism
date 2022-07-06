@@ -1,3 +1,15 @@
+# 0.5.0
+
+## Changed
+
+* Prism supports PackageManagement versions 1.3.2 through 1.4.7.
+* Prism supports PowerShellGet versions 2.0.0 through 2.2.5.
+
+## Fixed
+
+* Fixed: Prism commands fail if PowerShellGet and PackageManagement modules aren't already imported before being run.
+
+
 # 0.4.0
 
 ## Added
