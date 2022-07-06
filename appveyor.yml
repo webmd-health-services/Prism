@@ -51,33 +51,11 @@ for:
     only:
     - job_group: ps
   build_script:
-  - ps: .\init.ps1
-  - ps: |
-      try
-      {
-          .\build.ps1
-      }
-      finally
-      {
-          Get-Module | Format-Table -Auto | Out-String
-          Get-Module 'PackageManagement', 'PowerShellGet' -ListAvailable | Format-Table -Auto | Out-String
-          $Global:Error | Format-List * -Force
-      }
+  - ps: .\build.ps1
 
 # Build in PowerShell
 - matrix:
     only:
     - job_group: pwsh
   build_script:
-  - pwsh: ./init.ps1
-  - pwsh: |
-      try
-      {
-          ./build.ps1
-      }
-      finally
-      {
-          Get-Module | Format-Table -Auto | Out-String
-          Get-Module 'PackageManagement', 'PowerShellGet' -ListAvailable | Format-Table -Auto | Out-String
-          $Global:Error | Format-List * -Force
-      }
+  - pwsh: ./build.ps1

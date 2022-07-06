@@ -3,12 +3,8 @@ Build:
 - Version:
     Path: Prism\Prism.psd1
     Prerelease:
-    - "*/*": alpha$(WHISKEY_BUILD_NUMBER)
-    - prerelease: rc$(WHISKEY_BUILD_NUMBER)
-
-- Version:
-    OnlyBy: BuildServer
-    Build: $(WHISKEY_SCM_BRANCH).$(WHISKEY_SCM_COMMIT_ID.Substring(0,7))
+    - "*/*": alpha1+$(WHISKEY_BUILD_NUMBER)
+    - prerelease: rc1+$(WHISKEY_BUILD_NUMBER)
 
 # Update the AppVeyor build/version number.
 - Exec:
