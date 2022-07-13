@@ -51,8 +51,6 @@ function Invoke-Prism
 
         $pkgMgmtPrefs = Get-PackageManagementPreference
 
-        Write-Debug 'AVAILABLE MODULES'
-        Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
         Import-Module -Name 'PackageManagement' `
                       -MinimumVersion '1.3.2' `
                       -MaximumVersion '1.4.7' `
@@ -65,11 +63,6 @@ function Invoke-Prism
                       -Global `
                       -ErrorAction Stop `
                       @pkgMgmtPrefs
-        Write-Debug 'IMPORTED MODULES'
-        Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
-        Write-Debug 'AVAILABLE MODULES'
-        Write-Debug "PSModulePath  $($env:PSModulePath)"
-        Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
     }
 
     process
