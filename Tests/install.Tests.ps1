@@ -32,7 +32,7 @@ BeforeAll {
             [Parameter(Mandatory)]
             [String] $Contents,
             
-            [String] $In
+            [String] $In = $script:testRoot
         )
 
         $path = 'prism.json'
@@ -51,7 +51,7 @@ BeforeAll {
             [Parameter(Mandatory)]
             [String] $Contents,
             
-            [String] $In
+            [String] $In = $script:testRoot
         )
 
         $path = 'prism.lock.json'
@@ -70,7 +70,7 @@ BeforeAll {
             [Parameter(Mandatory)]
             [hashtable] $Module,
 
-            [String] $In,
+            [String] $In = $script:testRoot,
             
             [String] $UsingDirName = 'PSModules'
         )
@@ -127,9 +127,15 @@ BeforeAll {
             [hashtable] $WithParameters = @{}
         )
 
-        Invoke-Prism -Command 'install' @WithParameters |
-            Out-String |
-            Write-Verbose
+        Push-Location $script:testRoot
+        try
+        {
+            Invoke-Prism -Command 'install' @WithParameters | Out-String | Write-Verbose
+        }
+        finally
+        {
+            Pop-Location
+        }
     }
 }
 
@@ -349,6 +355,41 @@ Describe 'prism install' {
 }
 '@
         WhenInstalling
+        ThenInstalled @{ 'NoOp' = '1.0.0' }
+    }
+
+    It 'should find repositories when Get-PSRepository has never been called before' {
+        GivenPrismFile @'
+        {
+            "PSModules": [
+                {
+                    "Name": "NoOp",
+                    "Version": "1.*"
+                }
+            ]
+        }
+'@
+        GivenLockFile @'
+{
+    "PSModules":  [
+        {
+            "name":  "NoOp",
+            "version":  "1.0.0",
+            "repositorySourceLocation":  "https://www.powershellgallery.com/api/v2/"
+        }
+    ]
+}
+'@
+        $prismJsonPath = Join-Path -Path $script:testRoot -ChildPath 'prism.json' -Resolve -ErrorAction Stop
+        $importPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Prism' -Resolve
+        Start-Job {
+            $importPath = $using:importPath
+            $prismJsonPath = $using:prismJsonPath
+
+            Import-Module -Name $importPath
+            prism install -Path $prismJsonPath
+        } | Receive-Job -Wait -AutoRemoveJob
+        ThenSucceeded
         ThenInstalled @{ 'NoOp' = '1.0.0' }
     }
 }

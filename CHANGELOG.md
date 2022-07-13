@@ -1,3 +1,10 @@
+# 0.5.1
+
+## Fixed
+
+* `prism install` fails if `Get-PSRepository` hasn't been run before it.
+
+
 # 0.5.0
 
 ## Changed
