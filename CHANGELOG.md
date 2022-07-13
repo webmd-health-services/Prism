@@ -1,3 +1,11 @@
+# 0.5.1
+
+## Fixed
+
+* `prism install` fails if `Get-PSRepository` hasn't been run before it.
+* Prism commands are very slow in Windows PowerShell on Windows 10, Server 2012R2, and Server 2019 due to some overzealous logging.
+
+
 # 0.5.0
 
 ## Changed

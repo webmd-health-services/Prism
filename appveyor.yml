@@ -14,7 +14,7 @@ environment:
   matrix:
   - job_name: PowerShell 7.2 on Windows
     job_group: pwsh
-    appveyor_build_worker_image: Visual Studio 2022
+    appveyor_build_worker_image: Visual Studio 2022  # Windows Server 2019
 
   - job_name: PowerShell 7.1 on macOS
     job_group: pwsh
@@ -22,15 +22,15 @@ environment:
 
   - job_name: Windows PowerShell 5.1/.NET 4.6.2
     job_group: ps
-    appveyor_build_worker_image: Visual Studio 2013
+    appveyor_build_worker_image: Visual Studio 2013  # Windows Server 2012R2
 
   - job_name: Windows PowerShell 5.1/.NET 4.8
     job_group: ps
-    appveyor_build_worker_image: Visual Studio 2019
+    appveyor_build_worker_image: Visual Studio 2019  # Windows Server 2019
 
   - job_name: PowerShell 6.2 on Windows
     job_group: pwsh
-    appveyor_build_worker_image: Visual Studio 2015
+    appveyor_build_worker_image: Visual Studio 2015  # Windows Server 2012R2
 
   - job_name: PowerShell 7.2 on Ubuntu
     job_group: pwsh
@@ -38,7 +38,7 @@ environment:
 
   - job_name: PowerShell 7.1 on Windows
     job_group: pwsh
-    appveyor_build_worker_image: Visual Studio 2019
+    appveyor_build_worker_image: Visual Studio 2019  # Windows Server 2019
 
 
 artifacts:

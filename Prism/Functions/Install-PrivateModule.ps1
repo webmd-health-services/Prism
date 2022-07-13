@@ -34,12 +34,14 @@ function Install-PrivateModule
                 $repoByLocation[$trimmedRepoUrl] = $_.Name
             }
 
+        $privateModulePathWildcard = Join-Path -Path $config.PSModulesPath -ChildPath '*'
         $locks = Get-Content -Path $Configuration.LockPath | ConvertFrom-Json
         $locks | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() -ErrorAction Ignore
         foreach( $module in $locks.PSModules )
         {
             $installedModules =
                 Get-Module -Name $module.name -ListAvailable -ErrorAction Ignore |
+                Where-Object 'Path' -Like $privateModulePathWildcard |
                 Add-Member -Name 'SemVer' -MemberType ScriptProperty -PassThru -Value {
                     $prerelease = $this.PrivateData['PSData']['PreRelease']
                     if( $prerelease )

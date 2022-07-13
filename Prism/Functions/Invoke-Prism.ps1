@@ -51,8 +51,6 @@ function Invoke-Prism
 
         $pkgMgmtPrefs = Get-PackageManagementPreference
 
-        Write-Debug 'AVAILABLE MODULES'
-        Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
         Import-Module -Name 'PackageManagement' `
                       -MinimumVersion '1.3.2' `
                       -MaximumVersion '1.4.7' `
@@ -65,12 +63,6 @@ function Invoke-Prism
                       -Global `
                       -ErrorAction Stop `
                       @pkgMgmtPrefs
-        Write-Debug 'IMPORTED MODULES'
-        Get-Module | Format-Table -AutoSize | Out-String | Write-Debug
-
-        Write-Debug 'AVAILABLE MODULES'
-        Write-Debug "PSModulePath  $($env:PSModulePath)"
-        Get-Module -ListAvailable | Format-Table -AutoSize | Out-String | Write-Debug
     }
 
     process
@@ -138,23 +130,48 @@ function Invoke-Prism
                     $lockExtension = ''
                 }
 
-                $lockPath = Join-Path -Path ($prismJsonPath | Split-Path -Parent) -ChildPath "$($lockBaseName).lock$($lockExtension)"
-                # private members that users aren't allowed to customize.
-                $config |
-                    Add-Member -Name 'Path' -MemberType NoteProperty -Value $prismJsonPath -PassThru -Force |
-                    Add-Member -Name 'File' -MemberType NoteProperty -Value $prismJsonFile -PassThru -Force |
-                    Add-Member -Name 'LockPath' -MemberType NoteProperty -Value $lockPath -PassThru -Force |
-                    Out-Null
-
                 $ignore = @{ 'ErrorAction' = 'Ignore' }
                 # public configuration that users can customize.
-                # Add-Member doesn't return an object if the member already exists, so these can't be part of the pipeline.
+                # Add-Member doesn't return an object if the member already exists, so these can't be part of one pipeline.
                 $config | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() @ignore
                 $config | Add-Member -Name 'PSModulesDirectoryName' -MemberType NoteProperty -Value 'PSModules' @ignore
 
+                $privateModulePath =
+                    Join-Path -Path $prismJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
+                $lockPath =
+                    Join-Path -Path ($prismJsonPath |
+                    Split-Path -Parent) -ChildPath "$($lockBaseName).lock$($lockExtension)"
+                $addMemberArgs = @{
+                    MemberType = 'NoteProperty';
+                    PassThru = $true;
+                    # Force so users can't customize these properties.
+                    Force = $true;
+                }
+                # Members that users aren't allowed to customize/override.
+                $config |
+                    Add-Member -Name 'Path' -Value $prismJsonPath @addMemberArgs |
+                    Add-Member -Name 'File' -Value $prismJsonFile @addMemberArgs |
+                    Add-Member -Name 'LockPath' -Value $lockPath @addMemberArgs |
+                    Add-Member -Name 'PSModulesPath' -Value $privateModulePath @addMemberArgs |
+                    Out-Null
+
                 # This makes it so we can use PowerShell's module cmdlets as much as possible.
-                $privateModulePath =  Join-Path -Path $prismJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
-                $env:PSModulePath = $privateModulePath
+                $privateModulePath =  & {
+                    # Prism's private module path, PSModules.
+                    $config.PSModulesPath | Write-Output
+
+                    # PackageManagement needs to be able to find and load PowerShellGet so it can get repositoriees,
+                    # package sources, etc, so it and PowerShellGet have to be in PSModulePath, unfortunately.
+                    Get-Module -Name 'PackageManagement','PowerShellGet' |
+                        Select-Object -ExpandProperty 'Path' | # **\PSModules\MODULE\VERSION\MODULE.psd1
+                        Split-Path -Parent |                   # **\PSModules\MODULE\VERSION
+                        Split-Path -Parent |                   # **\PSModules\MODULE
+                        Split-Path -Parent |                   # **\PSModules
+                        Select-Object -Unique |
+                        Write-Output
+                }
+                $env:PSModulePath = $privateModulePath -join [IO.Path]::PathSeparator
+                Write-Debug -Message "env:PSModulePath  $($env:PSModulePath)"
 
                 switch( $Command )
                 {
