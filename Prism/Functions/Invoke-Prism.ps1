@@ -45,7 +45,7 @@ function Invoke-Prism
     begin
     {
         Set-StrictMode -Version 'Latest'
-        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState    
+        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
         $origModulePath = $env:PSModulePath
 
@@ -53,7 +53,7 @@ function Invoke-Prism
 
         Import-Module -Name 'PackageManagement' `
                       -MinimumVersion '1.3.2' `
-                      -MaximumVersion '1.4.7' `
+                      -MaximumVersion '1.4.8.1' `
                       -Global `
                       -ErrorAction Stop `
                       @pkgMgmtPrefs
@@ -175,7 +175,7 @@ function Invoke-Prism
 
                 switch( $Command )
                 {
-                    'install' 
+                    'install'
                     {
                         $config | Install-PrivateModule
                     }

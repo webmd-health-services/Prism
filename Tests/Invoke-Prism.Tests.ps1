@@ -45,8 +45,8 @@ BeforeAll {
     {
         Get-Module -Name 'PackageManagement' |
             Where-Object 'Version' -ge ([Version]'1.3.2') |
-            Where-Object 'Version' -le ([Version]'1.4.7') |
-            Should -Not -BeNullOrEmpty -Because 'should import PackageManagement 1.3.2 - 1.4.7'
+            Where-Object 'Version' -le ([Version]'1.4.8.1') |
+            Should -Not -BeNullOrEmpty -Because 'should import PackageManagement 1.3.2 - 1.4.8.1'
 
         Get-Module -Name 'PowerShellGet' |
             Where-Object 'Version' -ge ([Version]'2.0.0') |
@@ -60,7 +60,7 @@ BeforeAll {
         param(
             [Parameter(Mandatory)]
             [String] $Named,
-            
+
             [Parameter(Mandatory)]
             [hashtable[]] $Passing
         )
@@ -170,7 +170,7 @@ BeforeAll {
         Mock -CommandName 'Update-ModuleLock' -ModuleName 'Prism'
 
         $WithParameters['Command'] = $Named
-        try 
+        try
         {
             if( $WithPipelineInput )
             {
@@ -194,7 +194,7 @@ AfterAll {
 }
 
 Describe 'Invoke-Prism' {
-    BeforeEach { 
+    BeforeEach {
         $script:testRoot = $null
         $script:moduleList = @()
         $script:failed = $false

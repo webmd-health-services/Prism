@@ -1,3 +1,9 @@
+
+# 0.5.2
+
+* Adding support for PackageManagement 1.4.8.1.
+
+
 # 0.5.1
 
 ## Fixed
@@ -106,4 +112,4 @@ fresh repository.
 
 ## Fixed
 
-* Module fails to publish to PowerShell Gallery. 
+* Module fails to publish to PowerShell Gallery.
