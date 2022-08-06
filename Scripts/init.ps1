@@ -127,7 +127,7 @@ $psGet = [pscustomobject]@{
 $pkgMgmt =  [pscustomobject]@{
     Name = 'PackageManagement';
     MinimumVersion = '1.3.2';
-    MaximumVersion = '1.4.7';
+    MaximumVersion = '1.4.8.1';
 }
 
 $requiredModules = @( $psGet, $pkgMgmt )
