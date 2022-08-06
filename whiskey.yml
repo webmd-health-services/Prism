@@ -42,7 +42,7 @@ Build:
 
 - Zip:
     ArchivePath: .output\Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
-    Path: 
+    Path:
     - Prism
     Exclude:
     - "*.pdb"
@@ -53,6 +53,10 @@ Build:
     Path: appveyor
     Argument: [ 'PushArtifact', '.output/Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip', '-DeploymentName', 'GitHub' ]
 
+- Exec:
+    OnlyBy: BuildServer
+    Path: appveyor
+    Argument: [ 'PushArtifact', 'Scripts/init.ps1', '-DeploymentName', 'GitHub' ]
 
 - PublishPowerShellModule:
     Path: Prism
@@ -68,8 +72,8 @@ Build:
     ]
 
 - Pester:
-    Configuration: 
-        Run: 
+    Configuration:
+        Run:
             Path: Tests\*.Tests.ps1
             Exit: true
             Throw: true

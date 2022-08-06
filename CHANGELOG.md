@@ -1,4 +1,10 @@
 
+# 0.6.0
+
+* Adding an init.ps1 script that can be used to bootstrap Prism pre-requisites on a server. Currently, it installs
+PackageManagement and PowerShellGet modules into the current user's scope.
+
+
 # 0.5.2
 
 * Adding support for PackageManagement 1.4.8.1.
