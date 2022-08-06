@@ -15,7 +15,7 @@ get modules installed.
 
 * Windows PowerShell 5.1 and .NET 4.6.1+
 * PowerShell 6+ on Windows, Linux, or macOS
-* PackageManagement and PowerShellGet modules
+* PackageManagement 1.3.2+ and PowerShellGet 2.1.5+
 
 
 # Installing
@@ -64,20 +64,18 @@ checked into source control along with the prism.json file.
 
 # Adding to Builds
 
-To add Prism to your build process, you'll need to install then run it. Run these PowerShell commands together or
-separately:
+To add Prism to your build process, you'll need to install its dependencies, install Prism, then run it. Prism has an
+init.ps1 script that can do all this for you. Each release of Prism has an init.ps1 script whose URL you can find on the
+[GitHub releases page.](https://github.com/webmd-health-services/Prism/releases). Once you have the URL, you can add
+this snippet to your build (replacing `VERSION` with the version of init.ps1 you want to use):
 
 ```powershell
-Find-Module -Name 'Prism' | Select-Object -First 1 | Install-Module -Scope CurrentUser -Force
+Invoke-WebRequest 'https://github.com/webmd-health-services/Prism/releases/download/VERSION/init.ps1' | Invoke-Expression
 prism install
 ```
 
-Use the `-Force` switch with `Install-Module` so the module gets installed even if the repository it is being installed
-from is untrusted.
-
-The `Select-Object -First 1` command is included in case your build server has multiple PowerShell repositories defined.
-You can omit it if there is only one, or use the `Find-Module` command's `Repository` parameter to import from a
-specific repository.
+If you always want to use the latest version of the init.ps1 script instead of pinning to a specific version,
+[use this URL](https://raw.githubusercontent.com/webmd-health-services/Prism/main/init.ps1).
 
 Make sure you've run `prism install` at least once, and check the file it creates, `prism.lock.json`, into your
 repository. If you don't, the `prism install` command on the server will always generate the lock file, which makes
