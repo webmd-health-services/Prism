@@ -56,17 +56,15 @@ function Invoke-InstallJob
             }
         }
 
-        Find-Module -Name $name -RequiredVersion $version |
-            Select-Object -First 1 |
-            ForEach-Object {
-                $msg = "Saving PowerShell module $($name) $($version) in current user scope."
-                Write-Information $msg
-                $msg = "Installing $($_.Name) $($_.Version) from $($_.RepositorySourceLocation) to current user scope."
-                Write-Debug $msg
-                $_ | Install-Module -Force -AllowClobber -Scope CurrentUser
-            }
-        } | Wait-InstallJob
-        Write-Debug "$($Name) $($MaximumVersion) installation background job complete."
+        $moduleToInstall = Find-Module -Name $name -RequiredVersion $version | Select-Object -First 1
+        Write-Information "Saving PowerShell module $($name) $($version) in current user scope."
+        $msg = "Installing $($moduleToInstall.Name) $($moduleToInstall.Version) from " +
+               "$($moduleToInstall.RepositorySourceLocation) to current user scope."
+        Write-Debug $msg
+        $moduleToInstall | Install-Module -Force -AllowClobber -Scope CurrentUser
+        Get-Module -Name $name -ListAvailable | Where-Object 'Version' -EQ $moduleToInstall.Version
+    } | Wait-InstallJob
+    Write-Debug "$($Name) $($MaximumVersion) installation background job complete."
 }
 
 function Test-ModuleInstalled
@@ -176,9 +174,9 @@ Import-Module -Name 'PowerShellGet' `
 
 if( -not (Get-Module -Name 'Prism' -ListAvailable) )
 {
-    Find-Module -Name 'Prism' |
-        Select-Object -First 1
-        Install-Module -Name 'Prism' -Force -AllowClobber
+    $prismToInstall = Find-Module -Name 'Prism' | Select-Object -First 1
+    $prismToInstall | Install-Module -Force -AllowClobber -Scope CurrentUser
+    Get-Module -Name $prismToInstall.Name -ListAvailable | Where-Object 'Version' -EQ $prismToInstall.Version
 }
 
 Write-Debug 'Imported PowerShellGet and PackageManagement modules.'
@@ -186,5 +184,5 @@ Get-Module -Name $pkgMgmt.Name, $psGet.Name | Format-Table -Auto | Out-String | 
 
 if( (Test-Path -Path 'env:APPVEYOR') )
 {
-    Get-Module -Name $pkgMgmt.Name, $psGet.Name, 'Prism' -ListAvailable | Format-Table -Auto
+    Get-Module -Name $pkgMgmt.Name, $psGet.Name, 'Prism' -ListAvailable | Format-Table -Auto | Out-String | Write-Debug
 }
