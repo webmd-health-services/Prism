@@ -1,4 +1,10 @@
 
+# 0.6.0
+
+* Adding an init.ps1 script that can be used to install Prism's dependencies (PackageManagement and PowerShellGet
+modules) and install Prism.
+
+
 # 0.5.2
 
 * Adding support for PackageManagement 1.4.8.1.
