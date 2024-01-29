@@ -3,6 +3,13 @@
 
 # Prism Changelog
 
+## 0.6.1
+
+> Released 29 Jan 2024
+
+Fixed: Prism fails to find modules that only have prerelease versions.
+
+
 ## 0.6.0
 
 > Released 8 Aug 2022

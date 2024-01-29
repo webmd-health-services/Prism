@@ -63,7 +63,7 @@ BeforeAll {
 }
 
 Describe 'prism update' {
-    BeforeEach { 
+    BeforeEach {
         $script:testRoot = $null
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
         New-Item -Path $script:testRoot -ItemType 'Directory'
@@ -205,7 +205,7 @@ Describe 'prism update' {
                     repositorySourceLocation = $script:defaultLocation;
                  }
             )
-        } 
+        }
         ThenLockFileIs $expectedLock -In 'dir1'
         ThenLockFileIs $expectedLock -In 'dir1\dir2'
     }
@@ -229,4 +229,31 @@ Describe 'prism update' {
             )
         })
     }
+
+    # This test is only valid if the module being managed only has prerelease versions. When Carbon.Permissions no
+    # longer has only prerelease versions, the test will become invalid. But its valid now.
+    It 'handles module that only has prerelease version' {
+        GivenPrismFile @'
+{
+    "PSModules": [
+        { "Name": "Carbon.Permissions", "Version": "1.*-*" }
+    ]
+}
+'@
+        WhenLocking
+        $expectedModule =
+            Find-Module -Name 'Carbon.Permissions' -AllVersions -AllowPrerelease | `
+            Where-Object 'Version' -like '1.*-*' | `
+            Select-Object -First 1
+        ThenLockFileIs ([pscustomobject]@{
+            PSModules = @(
+                [pscustomobject]@{
+                    name = 'Carbon.Permissions';
+                    version = $expectedModule.Version;
+                    repositorySourceLocation = $script:defaultLocation;
+                }
+            )
+        })
+    }
+
 }
