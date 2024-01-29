@@ -1,16 +1,26 @@
+<!--markdownlint-disable MD012 no-multiple-blanks-->
+<!--markdownlint-disable MD024 no-duplicate-heading-->
 
-# 0.6.0
+# Prism Changelog
+
+## 0.6.0
+
+> Released 8 Aug 2022
 
 * Adding an init.ps1 script that can be used to install Prism's dependencies (PackageManagement and PowerShellGet
 modules) and install Prism.
 
 
-# 0.5.2
+## 0.5.2
+
+> Released 4 Aug 2022
 
 * Adding support for PackageManagement 1.4.8.1.
 
 
-# 0.5.1
+## 0.5.1
+
+> Released 13 Jul 2022
 
 ## Fixed
 
@@ -18,7 +28,9 @@ modules) and install Prism.
 * Prism commands are very slow in Windows PowerShell on Windows 10, Server 2012R2, and Server 2019 due to some overzealous logging.
 
 
-# 0.5.0
+## 0.5.0
+
+> Released 6 Jul 2022
 
 ## Changed
 
@@ -30,7 +42,9 @@ modules) and install Prism.
 * Fixed: Prism commands fail if PowerShellGet and PackageManagement modules aren't already imported before being run.
 
 
-# 0.4.0
+## 0.4.0
+
+> Released 28 Jun 2022
 
 ## Added
 
@@ -50,7 +64,9 @@ modules) and install Prism.
   Windows 8.1/Server 2012 R2, but ends with no forward slash on later operating systems.)
 
 
-# 0.3.0
+## 0.3.0
+
+> Released 17 Mar 2022
 
 ## Upgrade Instructions
 
@@ -75,7 +91,9 @@ by default.
   the prism.json file.
 
 
-# 0.2.0
+## 0.2.0
+
+> Released 16 Mar 2022
 
 ## Upgrade Instructions
 
@@ -100,12 +118,12 @@ We've renamed PxGet to Prism.
   command. If a lock file doesn't exist, the `install` command will call the `update` command first.
 
 
-# 0.1.3
+## 0.1.3
 
 * Improvements to documentation.
 
 
-# 0.1.2
+## 0.1.2
 
 * Fixed: no progress shown to the user about what `prism install` is doing.
 * Fixed: The `prism install` command fails to import its private PackageManagement and PowerShellGet modules in a
@@ -114,7 +132,7 @@ fresh repository.
 * Fixed: Progress output from the `Save-Module` command shows when running the `prism install` command.
 
 
-# 0.1.1
+## 0.1.1
 
 ## Fixed
 
