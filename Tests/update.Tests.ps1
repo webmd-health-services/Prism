@@ -145,7 +145,7 @@ Describe 'prism update' {
         GivenPrismFile @'
 {
     "PSModules": [
-        { "Name": "Carbon", "Version": "2.*-*" }
+        { "Name": "Carbon", "Version": "2.11.*-*" }
     ]
 }
 '@
