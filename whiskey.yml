@@ -3,8 +3,8 @@ Build:
 - Version:
     Path: Prism\Prism.psd1
     Prerelease:
-    - "*/*": alpha1+$(WHISKEY_BUILD_NUMBER)
-    - prerelease: rc1+$(WHISKEY_BUILD_NUMBER)
+    - main: ""
+    - "*": rc$(WHISKEY_BUILD_NUMBER)
 
 # Update the AppVeyor build/version number.
 - Exec:
@@ -81,3 +81,5 @@ Build:
             Enabled: true
             OutputPath: .output\pester.xml
             TestSuiteName: Prism
+        Output:
+            Verbosity: Detailed
