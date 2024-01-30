@@ -18,7 +18,7 @@ BeforeAll {
         Get-PSRepository -Name $script:latestNoOpModule.Repository | Select-Object -ExpandProperty 'SourceLocation'
     $script:latestNoOpLockFile = @"
 {
-    "PSModules": { 
+    "PSModules": {
         "name": "NoOp",
         "version": "$($script:latestNoOpModule.Version)",
         "repositorySourceLocation": "$($script:defaultLocation)"
@@ -31,7 +31,7 @@ BeforeAll {
         param(
             [Parameter(Mandatory)]
             [String] $Contents,
-            
+
             [String] $In = $script:testRoot
         )
 
@@ -50,7 +50,7 @@ BeforeAll {
         param(
             [Parameter(Mandatory)]
             [String] $Contents,
-            
+
             [String] $In = $script:testRoot
         )
 
@@ -71,7 +71,7 @@ BeforeAll {
             [hashtable] $Module,
 
             [String] $In = $script:testRoot,
-            
+
             [String] $UsingDirName = 'PSModules'
         )
 
@@ -114,12 +114,12 @@ BeforeAll {
             Select-Object -Unique |
             Should -HaveCount $expectedCount
     }
-    
+
     function ThenSucceeded
     {
         $Global:Error | Should -BeNullOrEmpty
     }
-    
+
     function WhenInstalling
     {
         [CmdletBinding()]
@@ -144,7 +144,7 @@ AfterAll {
 }
 
 Describe 'prism install' {
-    BeforeEach { 
+    BeforeEach {
         $script:testRoot = $null
         $script:moduleList = @()
         $script:failed = $false
@@ -271,7 +271,7 @@ Describe 'prism install' {
         $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 5>&1
         $output | Write-Verbose
-        
+
         # Import-Module doesn't output any debug messages.
         # Save-Module does.
         # From PowerShellGet. Can't find PackageManagement-only debug messages.
@@ -358,7 +358,8 @@ Describe 'prism install' {
         ThenInstalled @{ 'NoOp' = '1.0.0' }
     }
 
-    It 'should find repositories when Get-PSRepository has never been called before' {
+    $skip = (Test-Path -Path 'variable:IsMacOS') -and $IsMacOS
+    It 'should find repositories when Get-PSRepository has never been called before' -Skip:$skip {
         GivenPrismFile @'
         {
             "PSModules": [

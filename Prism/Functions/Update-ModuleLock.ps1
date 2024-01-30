@@ -21,7 +21,7 @@ function Update-ModuleLock
         $moduleNames = $Configuration.PSModules | Select-Object -ExpandProperty 'Name'
         if( -not $moduleNames )
         {
-            Write-Warning "There are no modules listed in ""$($Path | Resolve-Path -Relative)""."
+            Write-Warning "There are no modules listed in ""$($Configuration.Path | Resolve-Path -Relative)""."
             return
         }
 
@@ -38,13 +38,6 @@ function Update-ModuleLock
         try
         {
             $modules = Find-Module -Name $uniqueModuleNames -ErrorAction Ignore @pkgMgmtPrefs
-            if( -not $modules )
-            {
-                $msg = "$($Path | Resolve-Path -Relative): Modules ""$($uniqueModuleNames -join '", "')"" not " +
-                       'found.'
-                Write-Error $msg
-                return
-            }
 
             # Find-Module is expensive. Limit calls as much as possible.
             $findModuleCache = @{}
