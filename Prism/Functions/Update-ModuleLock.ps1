@@ -4,7 +4,10 @@ function Update-ModuleLock
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
-        [Object] $Configuration
+        [Object] $Configuration,
+
+        # A subset of the required modules to install or update.
+        [String[]] $Name
     )
 
     begin
@@ -19,11 +22,27 @@ function Update-ModuleLock
     {
         $modulesNotFound = [Collections.ArrayList]::New()
         $moduleNames = $Configuration.PSModules | Select-Object -ExpandProperty 'Name'
-        if( -not $moduleNames )
+        if (-not $moduleNames)
         {
             Write-Warning "There are no modules listed in ""$($Configuration.Path | Resolve-Path -Relative)""."
             return
         }
+
+        [Collections.Generic.List[String]]$nameCopy = $Name
+        foreach ($item in $Name)
+        {
+            if ($item -notin $moduleNames)
+            {
+                Write-Warning "The given module ""$item"" does not exist in the prism.json file."
+                $nameCopy.Remove($item)
+            }
+        }
+
+        if ($Name -and -not $nameCopy)
+        {
+            return
+        }
+        $Name = $nameCopy
 
         $numFinds = $moduleNames | Measure-Object | Select-Object -ExpandProperty 'Count'
         $numFinds = $numFinds + 2
@@ -48,6 +67,21 @@ function Update-ModuleLock
                 Join-Path -Path $Configuration.File.DirectoryName -ChildPath $Configuration.PSModulesDirectoryName
             foreach( $pxModule in $Configuration.PSModules )
             {
+                $currentLock = $null
+                if ($Name)
+                {
+                    if ($Configuration.LockPath -and (Test-Path -Path $Configuration.LockPath))
+                    {
+                        $currentLock = Get-Content -Path $Configuration.LockPath | ConvertFrom-Json
+                    }
+    
+                    # If current module is not in the given list of modules and doesn't already exist in the lock file, skip.
+                    if ($currentLock -and ($pxModule.Name -notin $Name) -and ($pxModule.Name -notin $currentLock.PSModules.Name))
+                    {
+                        continue
+                    }
+                }
+                
                 $optionalParams = @{}
 
                 # Make sure these members are present and have default values.
@@ -56,13 +90,20 @@ function Update-ModuleLock
                     Add-Member -Name 'AllowPrerelease' -MemberType NoteProperty -Value $false -ErrorAction Ignore
 
                 $versionDesc = 'latest'
-                if( $pxModule.Version )
+                if ($pxModule.Version)
                 {
                     $versionDesc = $optionalParams['Version'] = $pxModule.Version
+
+                    # If current module is not in the given list of modules, use it's version from lock file.
+                    if ($Name -and $pxModule.Name -notin $Name)
+                    {
+                        $lockedModule = $currentLock.PSModules | Where-Object {$_.Name -eq $pxModule.Name}
+                        $versionDesc = $optionalParams['Version'] = $lockedModule.Version
+                    }
                 }
 
                 $allowPrerelease = $false
-                if( $pxModule.AllowPrerelease -or $pxModule.Version -match '-' )
+                if ($pxModule.AllowPrerelease -or $pxModule.Version -match '-')
                 {
                     $allowPrerelease = $optionalParams['AllowPrerelease'] = $true
                 }
@@ -72,15 +113,15 @@ function Update-ModuleLock
                 Write-Debug "  curStep   $($curStep)"
                 $moduleToInstall =
                     $modules | Select-Module -Name $pxModule.Name @optionalParams | Select-Object -First 1
-                if( -not $moduleToInstall )
+                if (-not $moduleToInstall)
                 {
                     $status = "Find-Module -Name '$($pxModule.Name)' -AllVersions"
-                    if( $allowPrerelease )
+                    if ($allowPrerelease)
                     {
                         $status = "$($status) -AllowPrerelease"
                     }
 
-                    if( -not $findModuleCache.ContainsKey($status) )
+                    if (-not $findModuleCache.ContainsKey($status))
                     {
                         Write-Progress @activity -Status $status -PercentComplete ($curStep/$numFinds * 100)
                         $findModuleCache[$status] = Find-Module -Name $pxModule.Name `
@@ -95,7 +136,7 @@ function Update-ModuleLock
                         Select-Object -First 1
                 }
 
-                if( -not $moduleToInstall )
+                if (-not $moduleToInstall)
                 {
                     [void]$modulesNotFound.Add($pxModule.Name)
                     continue
@@ -108,7 +149,7 @@ function Update-ModuleLock
                 }
                 [void]$locks.Add( $pin )
 
-                if( -not (Test-Path -Path $Configuration.LockPath) )
+                if (-not (Test-Path -Path $Configuration.LockPath))
                 {
                     New-Item -Path $Configuration.LockPath `
                              -ItemType 'File' `
@@ -133,10 +174,10 @@ function Update-ModuleLock
             }
             $prismLock | ConvertTo-Json -Depth 2 | Set-Content -Path $Configuration.LockPath -NoNewline
 
-            if( $modulesNotFound.Count )
+            if ($modulesNotFound.Count)
             {
                 $suffix = ''
-                if( $modulesNotFound.Count -gt 1 )
+                if ($modulesNotFound.Count -gt 1)
                 {
                     $suffix = 's'
                 }

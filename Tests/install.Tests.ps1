@@ -36,7 +36,7 @@ BeforeAll {
         )
 
         $path = 'prism.json'
-        if( $In )
+        if ($In)
         {
             New-Item -Path $In -ItemType 'Directory' -Force | Out-Null
             $path = Join-Path -Path $In -ChildPath $path
@@ -55,7 +55,7 @@ BeforeAll {
         )
 
         $path = 'prism.lock.json'
-        if( $In )
+        if ($In)
         {
             New-Item -Path $In -ItemType 'Directory' -Force | Out-Null
             $path = Join-Path -Path $In -ChildPath $path
@@ -76,17 +76,17 @@ BeforeAll {
         )
 
         $savePath = $UsingDirName
-        if( $In )
+        if ($In)
         {
             $savePath = Join-Path -Path $In -ChildPath $savePath
         }
 
         # Make sure *only* the modules we requested are installed.
         $expectedCount = 0
-        foreach( $moduleName in $Module.Keys )
+        foreach ($moduleName in $Module.Keys)
         {
             $modulePath = Join-Path -Path $savePath -ChildPath $moduleName
-            foreach( $semver in $Module[$moduleName] )
+            foreach ($semver in $Module[$moduleName])
             {
                 $expectedCount += 1
                 $version,$prerelease = $semver -split '-'
@@ -97,7 +97,7 @@ BeforeAll {
                     Test-ModuleManifest -Path $manifestPath |
                     Add-Member -Name 'SemVer' -MemberType ScriptProperty -Value {
                         $prerelease = $this.PrivateData['PSData']['PreRelease']
-                        if( $prerelease )
+                        if ($prerelease)
                         {
                             $prerelease = "-$($prerelease)"
                         }
@@ -113,6 +113,34 @@ BeforeAll {
             Select-Object -ExpandProperty 'DirectoryName' |
             Select-Object -Unique |
             Should -HaveCount $expectedCount
+    }
+
+    function ThenNotInstalled
+    {
+        param(
+            [Parameter(Mandatory)]
+            [String] $Module,
+
+            [String] $In = $script:testRoot,
+
+            [String] $UsingDirName = 'PSModules'
+        )
+
+        $savePath = $UsingDirName
+        if ($In)
+        {
+            $savePath = Join-Path -Path $In -ChildPath $savePath
+        }
+
+        if (Test-Path -Path $savePath)
+        {
+            $installed = Get-ChildItem -Path $savePath
+            $installed | Should -Not -Contain $Module
+        }
+        else
+        {
+            Test-Path -Path $savePath | Should -BeFalse
+        }
     }
 
     function ThenSucceeded
@@ -331,7 +359,6 @@ Describe 'prism install' {
         ThenInstalled @{ 'NoOp' = '1.0.0' }
     }
 
-
     It 'should handle extra forward slash on PSGallery location' {
         GivenPrismFile @'
         {
@@ -392,5 +419,124 @@ Describe 'prism install' {
         } | Receive-Job -Wait -AutoRemoveJob
         ThenSucceeded
         ThenInstalled @{ 'NoOp' = '1.0.0' }
+    }
+
+    It 'should only install the specified modules' {
+        GivenPrismFile @'
+{
+    "PSModules": [
+        {
+            "Name": "NoOp",
+            "Version": "1.*"
+        },
+        {
+            "Name": "Carbon",
+            "Version": "2.*"
+        },
+        {
+            "Name": "Whiskey",
+            "Version": "0.*"
+        }
+    ]
+}
+'@
+        GivenLockFile @"
+{
+    "PSModules":  [
+        {
+            "name":  "NoOp",
+            "version":  "1.0.0",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        },
+        {
+            "name":  "Carbon",
+            "version":  "2.11.1",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        },
+        {
+            "name":  "Whiskey",
+            "version":  "0.61.0",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        }
+    ]
+}
+"@
+        WhenInstalling -WithParameters @{ Name = 'NoOp', 'Carbon' }
+        ThenInstalled @{ 'NoOp' = '1.0.0' ; 'Carbon' = '2.11.1' }
+        ThenNotInstalled 'Whiskey'
+    }
+
+    It 'should accept short hand syntax for array of names when installing modules' {
+        GivenPrismFile @'
+{
+    "PSModules": [
+        {
+            "Name": "NoOp",
+            "Version": "1.*"
+        },
+        {
+            "Name": "Carbon",
+            "Version": "2.*"
+        },
+        {
+            "Name": "Whiskey",
+            "Version": "0.*"
+        }
+    ]
+}
+'@
+        GivenLockFile @"
+{
+    "PSModules":  [
+        {
+            "name":  "NoOp",
+            "version":  "1.0.0",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        },
+        {
+            "name":  "Carbon",
+            "version":  "2.11.1",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        },
+        {
+            "name":  "Whiskey",
+            "version":  "0.61.0",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        }
+    ]
+}
+"@
+        Push-Location $script:testRoot
+        # Testing shorthand syntax
+        prism install 'NoOp', 'Carbon'
+        Pop-Location
+        ThenInstalled @{ 'NoOp' = '1.0.0' ; 'Carbon' = '2.11.1' }
+        ThenNotInstalled 'Whiskey'
+    }
+
+    It 'should do nothing when module specified does not exist in the prism.lock.json file' {
+        GivenPrismFile @'
+{
+    "PSModules": [
+        {
+            "Name": "NoOp",
+            "Version": "1.*"
+        }
+    ]
+}
+'@
+        GivenLockFile @"
+{
+    "PSModules":  [
+        {
+            "name":  "NoOp",
+            "version":  "1.0.0",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        }
+    ]
+}
+"@
+        WhenInstalling -WithParameters @{ Name = 'Carbon'}
+        ThenNotInstalled 'Carbon'
     }
 }
