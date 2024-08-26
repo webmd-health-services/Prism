@@ -13,13 +13,27 @@ function Invoke-Prism
     Invoke-Prism 'install'
 
     Demonstrates how to call this function to install required PSModules.
+
+    .EXAMPLE
+    Invoke-Prism 'install' -Name 'Module1', 'Module2'
+
+    Demonstrates how to install a subset of the required PSModules.
+
+    .EXAMPLE
+    Invoke-Prism 'update' -Name 'Module1', 'Module2'
+
+    Demonstrates how to update a subset of the required PSModules.
     #>
 
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory, Position=0)]
         [ValidateSet('install', 'update')]
         [String] $Command,
+
+        # A subset of the required modules to install or update.
+        [Parameter(Position=1)]
+        [String[]] $Name,
 
         # The path to a prism.json file or a directory where Prism can find a prism.json file. If path is to a file,
         # the "FileName" parameter is ignored, if given.
@@ -70,14 +84,14 @@ function Invoke-Prism
         try
         {
             $startIn = '.'
-            if( $Path )
+            if ($Path)
             {
-                if( (Test-Path -Path $Path -PathType Leaf) )
+                if ((Test-Path -Path $Path -PathType Leaf))
                 {
                     $FileName = $Path | Split-Path -Leaf
                     $startIn = $Path | Split-Path -Parent
                 }
-                elseif( (Test-Path -Path $Path -PathType Container) )
+                elseif ((Test-Path -Path $Path -PathType Container))
                 {
                     $startIn = $Path
                 }
@@ -90,18 +104,18 @@ function Invoke-Prism
 
             $Force = $FileName.StartsWith('.')
             $prismJsonFiles = Get-ChildItem -Path $startIn -Filter $FileName -Recurse:$Recurse -Force:$Force -ErrorAction Ignore
-            if( -not $prismJsonFiles )
+            if (-not $prismJsonFiles)
             {
                 $msg = ''
                 $suffix = ''
-                if( $Recurse )
+                if ($Recurse)
                 {
                     $suffix = 's'
                     $msg = ' or any of its sub-directories'
                 }
 
                 $locationMsg = 'the current directory'
-                if( $startIn -ne '.' -and $startIn -ne (Get-Location).Path )
+                if ($startIn -ne '.' -and $startIn -ne (Get-Location).Path)
                 {
                     $locationMsg = """$($startIn | Resolve-Path -Relative)"""
                 }
@@ -111,11 +125,11 @@ function Invoke-Prism
                 return
             }
 
-            foreach( $prismJsonFile in $prismJsonFiles )
+            foreach ($prismJsonFile in $prismJsonFiles)
             {
                 $prismJsonPath = $prismJsonFile.FullName
                 $config = Get-Content -Path $prismJsonPath | ConvertFrom-Json
-                if( -not $config )
+                if (-not $config)
                 {
                     Write-Warning "File ""$($prismJsonPath | Resolve-Path -Relative) is empty."
                     continue
@@ -124,7 +138,7 @@ function Invoke-Prism
                 $lockBaseName = [IO.Path]::GetFileNameWithoutExtension($prismJsonPath)
                 $lockExtension = [IO.Path]::GetExtension($prismJsonPath)
                 # Hidden file with no extension, e.g. `.prism`
-                if( -not $lockBaseName -and $lockExtension )
+                if (-not $lockBaseName -and $lockExtension)
                 {
                     $lockBaseName = $lockExtension
                     $lockExtension = ''
@@ -173,15 +187,15 @@ function Invoke-Prism
                 $env:PSModulePath = $privateModulePath -join [IO.Path]::PathSeparator
                 Write-Debug -Message "env:PSModulePath  $($env:PSModulePath)"
 
-                switch( $Command )
+                switch ($Command)
                 {
                     'install'
                     {
-                        $config | Install-PrivateModule
+                        $config | Install-PrivateModule -Name $Name
                     }
                     'update'
                     {
-                        $config | Update-ModuleLock
+                        $config | Update-ModuleLock -Name $Name
                     }
                 }
             }

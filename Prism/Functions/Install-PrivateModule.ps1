@@ -5,7 +5,10 @@ function Install-PrivateModule
     [CmdletBinding()]
     param(
         [Parameter(Mandatory, ValueFromPipeline)]
-        [Object] $Configuration
+        [Object] $Configuration,
+
+        # A subset of the required modules to install or update.
+        [String[]] $Name
     )
 
     begin
@@ -18,7 +21,7 @@ function Install-PrivateModule
 
     process
     {
-        if( -not (Test-Path -Path $Configuration.LockPath) )
+        if (-not (Test-Path -Path $Configuration.LockPath))
         {
             $Configuration | Update-ModuleLock | Format-Table
         }
@@ -37,14 +40,20 @@ function Install-PrivateModule
         $privateModulePathWildcard = Join-Path -Path $config.PSModulesPath -ChildPath '*'
         $locks = Get-Content -Path $Configuration.LockPath | ConvertFrom-Json
         $locks | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() -ErrorAction Ignore
-        foreach( $module in $locks.PSModules )
+
+        if ($Name)
+        {
+            $locks.PSModules = $locks.PSModules | Where-Object {$_.Name -in $Name}
+        }
+
+        foreach ($module in $locks.PSModules)
         {
             $installedModules =
                 Get-Module -Name $module.name -ListAvailable -ErrorAction Ignore |
                 Where-Object 'Path' -Like $privateModulePathWildcard |
                 Add-Member -Name 'SemVer' -MemberType ScriptProperty -PassThru -Value {
                     $prerelease = $this.PrivateData['PSData']['PreRelease']
-                    if( $prerelease )
+                    if ($prerelease)
                     {
                         $prerelease = "-$($prerelease)"
                     }
@@ -55,17 +64,17 @@ function Install-PrivateModule
                 Join-Path -Path $Configuration.File.DirectoryName -ChildPath $Configuration.PSModulesDirectoryName
 
             $installedModule = $installedModules | Where-Object SemVer -EQ $module.version 
-            if( -not $installedModule )
+            if (-not $installedModule)
             {
                 $sourceUrl = $module.repositorySourceLocation
                 $repoName = $repoByLocation[$sourceUrl]
-                if( -not $repoName )
+                if (-not $repoName)
                 {
                     # Ignore slashes at the end of URLs.
                     $sourceUrl = $sourceUrl.TrimEnd('/')
                 }
                 $repoName = $repoByLocation[$sourceUrl]
-                if( -not $repoName )
+                if (-not $repoName)
                 {
                     $msg = "PowerShell repository at ""$($module.repositorySourceLocation)"" does not exist. Use " +
                             '"Get-PSRepository" to see the current list of repositories, "Register-PSRepository" ' +
@@ -74,7 +83,7 @@ function Install-PrivateModule
                     continue
                 }
 
-                if( -not (Test-Path -Path $savePath) )
+                if (-not (Test-Path -Path $savePath))
                 {
                     New-Item -Path $savePath -ItemType 'Directory' -Force | Out-Null
                 }

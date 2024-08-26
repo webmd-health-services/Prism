@@ -3,6 +3,14 @@
 
 # Prism Changelog
 
+## 0.7.0
+
+> Released 27 Aug 2024
+
+Added the ability to install or update a subset of the modules listed in the prism.json file. Specify the subset of
+modules by passing it to the `Name` parameter when invoking prism.
+
+
 ## 0.6.1
 
 > Released 29 Jan 2024
