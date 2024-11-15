@@ -150,8 +150,27 @@ function Invoke-Prism
                 $config | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() @ignore
                 $config | Add-Member -Name 'PSModulesDirectoryName' -MemberType NoteProperty -Value 'PSModules' @ignore
 
-                $privateModulePath =
+                if ($config.PSModulesDirectoryName.Contains('\') -or `
+                    $config.PSModulesDirectoryName.Contains('/') -or `
+                    $config.PSModulesDirectoryName -eq '..')
+                {
+                    $msg = "Failed to run ``prism ${Command}`` because the ""PSModulesDirectoryName"" configuration " +
+                           "value, ""$($config.PSModulesDirectoryName)"", in ""${primsJsonPath}"" is invalid. It can " +
+                           'not contain the "\" or "/" characters or be "..".'
+                    Write-Error -Message $msg -ErrorAction Stop
+                    return
+                }
+
+                $isNested = (Test-Path -Path (Join-Path -Path $prismJsonFile.DirectoryName -ChildPath '*.psd1')) -or `
+                            (Test-Path -Path (Join-Path -Path $prismJsonFile.DirectoryName -ChildPath '*.psm1'))
+
+                $installDirPath =
                     Join-Path -Path $prismJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
+                if ($isNested -or $config.PSModulesDirectoryName -eq '.')
+                {
+                    $installDirPath = $prismJsonFile.DirectoryName
+                }
+
                 $lockPath =
                     Join-Path -Path ($prismJsonPath |
                     Split-Path -Parent) -ChildPath "$($lockBaseName).lock$($lockExtension)"
@@ -166,13 +185,14 @@ function Invoke-Prism
                     Add-Member -Name 'Path' -Value $prismJsonPath @addMemberArgs |
                     Add-Member -Name 'File' -Value $prismJsonFile @addMemberArgs |
                     Add-Member -Name 'LockPath' -Value $lockPath @addMemberArgs |
-                    Add-Member -Name 'PSModulesPath' -Value $privateModulePath @addMemberArgs |
+                    Add-Member -Name 'Nested' -Value $isNested @addMemberArgs |
+                    Add-Member -Name 'InstallDirectoryPath' -Value $installDirPath @addMemberArgs |
                     Out-Null
 
                 # This makes it so we can use PowerShell's module cmdlets as much as possible.
                 $privateModulePath =  & {
-                    # Prism's private module path, PSModules.
-                    $config.PSModulesPath | Write-Output
+                    # Prism's private module path, PSModules, or a module directory, if installing nested modules.
+                    $config.InstallDirectoryPath | Write-Output
 
                     # PackageManagement needs to be able to find and load PowerShellGet so it can get repositoriees,
                     # package sources, etc, so it and PowerShellGet have to be in PSModulePath, unfortunately.

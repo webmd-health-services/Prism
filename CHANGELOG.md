@@ -3,6 +3,23 @@
 
 # Prism Changelog
 
+## 0.8.0
+
+### Nesting Improvements
+
+PowerShell has a 10 directory nesting limit for nested modules.In order to prvent this nesting limit, Prism now:
+
+* installs nested modules directly in the module directory instead of a "PSModules" directory.
+* moves modules out of the versioned directory where PowerShell installs them by default (unless a module depends on
+  multiple versions of the same module).
+
+Prism determines if it is installing nested modules by looking for a .psd1 or .psm1 file in the same directory as the
+prism.json file.
+
+### Changes
+
+The "PSModulesDirectoryName" configuration option can no longer be a path.
+
 ## 0.7.0
 
 > Released 27 Aug 2024
