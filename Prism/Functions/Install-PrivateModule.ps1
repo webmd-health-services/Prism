@@ -34,7 +34,7 @@ function Install-PrivateModule
     {
         if (-not (Test-Path -Path $Configuration.LockPath))
         {
-            $Configuration | Update-ModuleLock | Format-Table
+            $Configuration | Update-ModuleLock | Out-Null
         }
 
         $installDirPath = $Configuration.InstallDirectoryPath
@@ -62,55 +62,57 @@ function Install-PrivateModule
                 }
 
             $installedModule = $installedModules | Where-Object 'SemVer' -EQ $module.version
-            if (-not $installedModule)
+            if ($installedModule)
             {
-                $sourceUrl = $module.repositorySourceLocation
-                $repoName = $repoByLocation[$sourceUrl]
-                if (-not $repoName)
-                {
-                    # Ignore slashes at the end of URLs.
-                    $sourceUrl = $sourceUrl.TrimEnd('/')
-                }
-                $repoName = $repoByLocation[$sourceUrl]
-                if (-not $repoName)
-                {
-                    $msg = "PowerShell repository at ""$($module.repositorySourceLocation)"" does not exist. Use " +
-                            '"Get-PSRepository" to see the current list of repositories, "Register-PSRepository" ' +
-                            'to add a new repository, or "Set-PSRepository" to update an existing repository.'
-                    Write-Error $msg
-                    continue
-                }
+                continue
+            }
 
-                if (-not (Test-Path -Path $installDirPath))
+            $sourceUrl = $module.repositorySourceLocation
+            $repoName = $repoByLocation[$sourceUrl]
+            if (-not $repoName)
+            {
+                # Ignore slashes at the end of URLs.
+                $sourceUrl = $sourceUrl.TrimEnd('/')
+            }
+            $repoName = $repoByLocation[$sourceUrl]
+            if (-not $repoName)
+            {
+                $msg = "PowerShell repository at ""$($module.repositorySourceLocation)"" does not exist. Use " +
+                        '"Get-PSRepository" to see the current list of repositories, "Register-PSRepository" ' +
+                        'to add a new repository, or "Set-PSRepository" to update an existing repository.'
+                Write-Error $msg
+                continue
+            }
+
+            if (-not (Test-Path -Path $installDirPath))
+            {
+                New-Item -Path $installDirPath -ItemType 'Directory' -Force | Out-Null
+            }
+
+            Save-Module -Name $module.name `
+                        -Path $installDirPath `
+                        -RequiredVersion $module.version `
+                        -AllowPrerelease `
+                        -Repository $repoName `
+                        @pkgMgmtPrefs
+
+            # How many versions of this module will we be installing?
+            $moduleVersionCount = ($locks.PSModules | Where-Object 'Name' -EQ $module.name | Measure-Object).Count
+
+            # PowerShell has a 10 directory limit for nested modules, so reduce the number of nested directories
+            # when installing a nested module by installing directly in the module root directory and moving
+            # everything out of the version module directory.
+            if ($Configuration.Nested -and $moduleVersionCount -eq 1)
+            {
+                $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name
+                $versionDirName = $module.version
+                if ($versionDirName -match '^(\d+\.\d+\.\d+)')
                 {
-                    New-Item -Path $installDirPath -ItemType 'Directory' -Force | Out-Null
+                    $versionDirName = $Matches[1]
                 }
-
-                Save-Module -Name $module.name `
-                            -Path $installDirPath `
-                            -RequiredVersion $module.version `
-                            -AllowPrerelease `
-                            -Repository $repoName `
-                            @pkgMgmtPrefs
-
-                # How many versions of this module will we be installing?
-                $moduleVersionCount = ($locks.PSModules | Where-Object 'Name' -EQ $module.name | Measure-Object).Count
-
-                # PowerShell has a 10 directory limit for nested modules, so reduce the number of nested directories
-                # when installing a nested module by installing directly in the module root directory and moving
-                # everything out of the version module directory.
-                if ($Configuration.Nested -and $moduleVersionCount -eq 1)
-                {
-                    $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name
-                    $versionDirName = $module.version
-                    if ($versionDirName -match '^(\d+\.\d+\.\d+)')
-                    {
-                        $versionDirName = $Matches[1]
-                    }
-                    $moduleVersionPath = Join-Path -Path $modulePath -ChildPath $versionDirName
-                    Get-ChildItem -Path $moduleVersionPath -Force | Move-Item -Destination $modulePath
-                    Get-Item -Path $moduleVersionPath | Remove-Item
-                }
+                $moduleVersionPath = Join-Path -Path $modulePath -ChildPath $versionDirName
+                Get-ChildItem -Path $moduleVersionPath -Force | Move-Item -Destination $modulePath
+                Get-Item -Path $moduleVersionPath | Remove-Item
             }
 
             $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name | Resolve-Path -Relative

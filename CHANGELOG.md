@@ -18,7 +18,8 @@ prism.json file.
 
 ### Changes
 
-The "PSModulesDirectoryName" configuration option can no longer be a path.
+* The "PSModulesDirectoryName" configuration option can no longer be a path.
+* The `prism install` command only returns objects for modules that were actually installed.
 
 ## 0.7.0
 

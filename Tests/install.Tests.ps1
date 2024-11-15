@@ -13,6 +13,7 @@ BeforeAll {
     $script:origVerbosePref = $Global:VerbosePreference
     $script:origDebugPref = $Global:DebugPreference
     $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
+    $script:result = $null
     $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
     $script:defaultLocation =
         Get-PSRepository -Name $script:latestNoOpModule.Repository | Select-Object -ExpandProperty 'SourceLocation'
@@ -183,6 +184,15 @@ BeforeAll {
         }
     }
 
+    function ThenReturned
+    {
+        param(
+            [int] $ExpectedCount
+        )
+
+        $script:result | Should -HaveCount $ExpectedCount
+    }
+
     function ThenSucceeded
     {
         $Global:Error | Should -BeNullOrEmpty
@@ -198,7 +208,7 @@ BeforeAll {
         Push-Location $script:testRoot
         try
         {
-            Invoke-Prism -Command 'install' @WithParameters | Out-String | Write-Verbose
+            $script:result = Invoke-Prism -Command 'install' @WithParameters
         }
         finally
         {
@@ -218,6 +228,7 @@ Describe 'prism install' {
         $script:failed = $false
         $Global:Error.Clear()
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        $script:result = $null
         New-Item -Path $script:testRoot -ItemType 'Directory' -ErrorAction Ignore
         Push-Location $script:testRoot
     }
@@ -248,8 +259,10 @@ Describe 'prism install' {
                 [pscustomobject]@{ name = 'NoOp'; version = '1.0.0'; repositorySourceLocation = $script:defaultLocation }
             )}) | ConvertTo-Json
         Get-Content -Path 'prism.lock.json' -Raw | Should -Be $expectedContent
+        ThenReturned 1
     }
 
+    # The only way this can happen is if someone manually updates their prism.lock.json file.
     It 'should install multiple versions' {
         GivenPrismFile '{}' # install only cares about prism.lock.json
         GivenLockFile @"
@@ -262,6 +275,7 @@ Describe 'prism install' {
 "@
         WhenInstalling
         ThenInstalled @{ 'Carbon' = @('2.11.1', '2.11.0') }
+        ThenReturned 2
     }
 
     It 'should pass and install to custom PSModules directory' {
@@ -368,8 +382,10 @@ Describe 'prism install' {
 "@
         WhenInstalling
         ThenInstalled @{ 'NoOp' = '1.0.0' }
+        ThenReturned 1
         Mock -CommandName 'Save-Module' -ModuleName 'Prism'
         WhenInstalling
+        ThenReturned 0
         Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Prism' -Times 0 -Exactly
     }
 
