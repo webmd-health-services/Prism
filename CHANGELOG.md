@@ -19,7 +19,12 @@ prism.json file.
 ### Changes
 
 * The "PSModulesDirectoryName" configuration option can no longer be a path.
-* The `prism install` command only returns objects for modules that were actually installed.
+* The `prism install` command now only returns objects for modules that were actually installed.
+* The `prism update` command now only returns objects for modules whose version changed/updated.
+* Prism now saves modules to the lock file in alphabetical order.
+* The `prism update` command now shows the previous version number a module was pinned to.
+* The `prism update` command no longer changes the repository location a module is locked to. Previously, if a module
+  was found in multiple repositories, the lock file could sometimes change the repository location.
 
 ## 0.7.0
 

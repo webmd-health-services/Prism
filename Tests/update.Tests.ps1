@@ -10,6 +10,7 @@ BeforeAll {
     $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
     $script:defaultLocation =
         Get-PSRepository -Name $script:latestNoOpModule.Repository | Select-Object -ExpandProperty 'SourceLocation'
+    $script:result = $null
 
     function GivenPrismFile
     {
@@ -72,6 +73,15 @@ BeforeAll {
         Test-Path -Path $path | Should -BeFalse
     }
 
+    function ThenReturned
+    {
+        param(
+            [int] $ExpectedCount
+        )
+
+        $script:result | Should -HaveCount $ExpectedCount
+    }
+
     function WhenLocking
     {
         [CmdletBinding()]
@@ -91,8 +101,7 @@ BeforeAll {
         {
             $optionalParams['Name'] = $Name
         }
-        $result = Invoke-Prism -Command 'update' @optionalParams
-        $result | Out-String | Write-Verbose -Verbose
+        $script:result = Invoke-Prism -Command 'update' @optionalParams
     }
 }
 
@@ -100,6 +109,7 @@ Describe 'prism update' {
     BeforeEach {
         $script:testRoot = $null
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        $script:result = $null
         New-Item -Path $script:testRoot -ItemType 'Directory'
         $Global:Error.Clear()
         Push-Location $script:testRoot
@@ -133,6 +143,7 @@ Describe 'prism update' {
                 }
             );
         })
+        ThenReturned 2
     }
 
     It 'should resolve latest version by default' {
@@ -151,6 +162,7 @@ Describe 'prism update' {
                  }
             )
         })
+        ThenReturned 1
     }
 
     It 'should resolve wildcards' {
@@ -341,14 +353,14 @@ Describe 'prism update' {
         ThenLockFileIs ([pscustomobject]@{
             PSModules = @(
                 [pscustomobject]@{
-                    name = 'NoOp';
-                    version = $script:latestNoOpModule.Version;
-                    repositorySourceLocation = $script:defaultLocation;
-                },
-                [pscustomobject]@{
                     name = 'Carbon';
                     version = $expectedCarbonModule.Version;
                     repositorySourceLocation = $carbonV0DefaultLocation;
+                },
+                [pscustomobject]@{
+                    name = 'NoOp';
+                    version = $script:latestNoOpModule.Version;
+                    repositorySourceLocation = $script:defaultLocation;
                 },
                 [pscustomobject]@{
                     name = 'Whiskey';
@@ -357,6 +369,7 @@ Describe 'prism update' {
                 }
             )
         })
+        ThenReturned 1
     }
 
     It 'should ignore modules that are not currently in the lock file when updating a specific set of modules' {
@@ -404,14 +417,14 @@ Describe 'prism update' {
         ThenLockFileIs ([pscustomobject]@{
             PSModules = @(
                 [pscustomobject]@{
-                    name = 'NoOp';
-                    version = $script:latestNoOpModule.Version;
-                    repositorySourceLocation = $script:defaultLocation;
-                },
-                [pscustomobject]@{
                     name = 'Carbon';
                     version = $expectedCarbonModule.Version;
                     repositorySourceLocation = $carbonV0DefaultLocation;
+                },
+                [pscustomobject]@{
+                    name = 'NoOp';
+                    version = $script:latestNoOpModule.Version;
+                    repositorySourceLocation = $script:defaultLocation;
                 }
             )
         })
@@ -469,14 +482,14 @@ Describe 'prism update' {
         ThenLockFileIs ([pscustomobject]@{
             PSModules = @(
                 [pscustomobject]@{
-                    name = 'NoOp';
-                    version = $script:latestNoOpModule.Version;
-                    repositorySourceLocation = $script:defaultLocation;
-                },
-                [pscustomobject]@{
                     name = 'Carbon';
                     version = $expectedCarbonModule.Version;
                     repositorySourceLocation = $carbonV0DefaultLocation;
+                },
+                [pscustomobject]@{
+                    name = 'NoOp';
+                    version = $script:latestNoOpModule.Version;
+                    repositorySourceLocation = $script:defaultLocation;
                 },
                 [pscustomobject]@{
                     name = 'Whiskey';
@@ -500,5 +513,6 @@ Describe 'prism update' {
 '@
         WhenLocking -Name ('Whiskey', 'Carbon')
         ThenLockFileDoesntExist
+        ThenReturned 0
     }
 }
