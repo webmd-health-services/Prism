@@ -87,7 +87,8 @@ builds take longer.
 
 Each module object in the prism.json file must have a `Name` property, which is the name of the module to install. Each
 object can also have a `Version` property, which is the version to install. Wildcards are supported, so you can pin to
-the latest major, minor, or patch versions of a module. The default is to install the latest version of a module.
+the latest major, minor, or patch versions of a module. The default is to install the latest version of a module. To
+allow pinning to prerelease versions, add an `AllowPrerelease` property whose value is `true`.
 
 ### Module Version
 
@@ -138,6 +139,28 @@ Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'PSModules\Whiskey
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Whiskey' -Resolve)
 ```
 
+## Using Nested Modules in a Module
+
+### Installing
+
+PowerShell has a 10 directory nested limit for nested modules. When using nested modules in a module, in order to avoid
+errors about too much nesting, Prism will install the modules directly into your module directory and will also *not*
+install modules into a version-specific directory. Prism automatically detects when installing into a module directory
+by looking for a .psd1 or .psm1 file in the same directory as the prism.json file.
+
+### Importing
+
+To import and use a private, nested module installed by Prism, use `Import-Module` and pass the path to the module
+instead of a module name. Use `Join-Path` and join the path to your module's directory with the relative path to the
+module.
+
+```powershell
+
+$script:moduleDirPath = $PSScriptRoot
+
+Import-Module -Name (Join-Path -Path $script:moduleDirPath -ChildPath 'Whiskey' -Resolve)
+```
+
 ### Best Practices
 
 #### In Scripts
@@ -150,8 +173,9 @@ commands your script is importing and using. It makes upgrading easier when you 
 
 #### When Writing Modules
 
-***DO*** ship your module's dependencies as nested modules, preferably in a "Modules" directory. Import dependencies
-from that private location. A module can have its own version of a module loaded privately.
+***DO*** ship your module's dependencies as nested modules. Use Prism to manage these as it structures dependencies to
+avoid deep nesting errors. Import dependencies from that private location. A module can have its own version of a module
+loaded privately.
 
 ***DO NOT*** use the `NestedModules` module manifest property. Use an explicit `Import-Module` in your root module to
 import dependencies saved inside your module.
@@ -169,9 +193,10 @@ PowerShell.
 
 ## Implementation
 
-### Overview
+### PackageManagement and PowerShellGet
 
-Prism uses its own private copies of the `PackageManagement` and `PowerShellGet` modules to find and install modules.
+Prism requires that PackageManagement and PowerShellGet are installed and available globally. See the "System
+Requiremens" for the versions of each that should be installed.
 
 ### prism install
 
@@ -185,12 +210,12 @@ private PSModules directory. If it is, the module is not re-installed. If it isn
 
 ### prism update
 
-It calls`Find-Module` once to get the latest version of all the modules in the "prism.json" file. For each module with a
-specific version that doesn't match the latest version, Prism will call `Find-Module` again to get all versions of that
-module. (If the module's version from the "prism.json" file contains the prerelease suffix, `-`, prerelease versions
-will be included.) Prism selects the first version returned by `Find-Module` that matches the version wildcard from the
-"prism.json" file. It writes these versions to a lock file, which is used by the `prism install` command to install
-the modules.
+It calls `Find-Module` once to get the latest version of all the modules in the "prism.json" file. For each module with
+a specific version that doesn't match the latest version, Prism will call `Find-Module` again to get all versions of
+that module. (If the module's version from the "prism.json" file contains the prerelease suffix, `-`, or the build
+suffix, `+`, or the `AllowPrerelease` proeprty exists and is set to `true`, prerelease versions will be included.) Prism
+selects the first version returned by `Find-Module` that matches the version wildcard from the "prism.json" file. It
+writes these versions to a lock file, which is used by the `prism install` command to install the modules.
 
 ## Troubleshooting
 
