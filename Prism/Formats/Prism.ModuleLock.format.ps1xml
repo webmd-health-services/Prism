@@ -21,6 +21,9 @@
                 <PropertyName>Version</PropertyName>
               </TableColumnItem>
               <TableColumnItem>
+                <PropertyName>PreviousLockedVersion</PropertyName>
+              </TableColumnItem>
+              <TableColumnItem>
                 <PropertyName>LockedVersion</PropertyName>
               </TableColumnItem>
               <TableColumnItem>

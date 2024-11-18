@@ -13,6 +13,7 @@ BeforeAll {
     $script:origVerbosePref = $Global:VerbosePreference
     $script:origDebugPref = $Global:DebugPreference
     $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
+    $script:result = $null
     $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
     $script:defaultLocation =
         Get-PSRepository -Name $script:latestNoOpModule.Repository | Select-Object -ExpandProperty 'SourceLocation'
@@ -26,6 +27,32 @@ BeforeAll {
 }
 "@
 
+    function GivenFile
+    {
+        param(
+            [Parameter(Mandatory)]
+            [String] $Named,
+
+            [String] $WithContent,
+
+            [String] $In = $script:testRoot
+        )
+
+        $filePath = Join-Path -Path $In -ChildPath $Named
+        $dirPath = $filePath | Split-Path -Parent
+        if (-not (Test-Path -Path $dirPath))
+        {
+            New-Item -Path $dirPath -ItemType Directory
+        }
+
+        New-Item -Path $filePath -ItemType File
+
+        if ($WithContent)
+        {
+            $WithContent | Set-Content -Path $filePath -NoNewline
+        }
+    }
+
     function GivenPrismFile
     {
         param(
@@ -35,14 +62,7 @@ BeforeAll {
             [String] $In = $script:testRoot
         )
 
-        $path = 'prism.json'
-        if ($In)
-        {
-            New-Item -Path $In -ItemType 'Directory' -Force | Out-Null
-            $path = Join-Path -Path $In -ChildPath $path
-        }
-
-        $Contents | Set-Content -Path $path -NoNewline
+        GivenFile 'prism.json' -In $In -WithContent $Contents
     }
 
     function GivenLockFile
@@ -54,31 +74,41 @@ BeforeAll {
             [String] $In = $script:testRoot
         )
 
-        $path = 'prism.lock.json'
-        if ($In)
-        {
-            New-Item -Path $In -ItemType 'Directory' -Force | Out-Null
-            $path = Join-Path -Path $In -ChildPath $path
-        }
-
-        $Contents | Set-Content -Path $path -NoNewline
+        GivenFile 'prism.lock.json' -In $In -WithContent $Contents
     }
 
     function ThenInstalled
     {
+        [CmdletBinding(DefaultParameterSetName='NonNested')]
         param(
-            [Parameter(Mandatory)]
+            [Parameter(Mandatory, Position=0)]
             [hashtable] $Module,
 
-            [String] $In = $script:testRoot,
+            [String] $In,
 
-            [String] $UsingDirName = 'PSModules'
+            [Parameter(ParameterSetName='NonNested')]
+            [String] $UsingDirName,
+
+            [Parameter(Mandatory, ParameterSetName='Nested')]
+            [switch] $AsNestedModule
         )
 
-        $savePath = $UsingDirName
-        if ($In)
+        if (-not $In)
         {
-            $savePath = Join-Path -Path $In -ChildPath $savePath
+            $In = $script:testRoot
+        }
+
+        if (-not $UsingDirName)
+        {
+            $UsingDirName = 'PSModules'
+        }
+
+        $isNestedModule = $PSCmdlet.ParameterSetName -eq 'Nested'
+
+        $savePath = $In
+        if (-not $isNestedModule)
+        {
+            $savePath = Join-Path -Path $In -ChildPath $UsingDirName
         }
 
         # Make sure *only* the modules we requested are installed.
@@ -91,6 +121,11 @@ BeforeAll {
                 $expectedCount += 1
                 $version,$prerelease = $semver -split '-'
                 $manifestPath = Join-Path -Path $modulePath -ChildPath $version
+                if ($isNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
+                {
+                    $manifestPath | Should -Not -Exist -Because 'should remove version directory for nested module'
+                    $manifestPath = $manifestPath | Split-Path -Parent
+                }
                 $manifestPath = Join-Path -Path $manifestPath -ChildPath "$($moduleName).psd1"
                 $manifestPath | Should -Exist
                 $manifest =
@@ -109,7 +144,13 @@ BeforeAll {
             }
         }
 
-        Get-ChildItem -Path "$($savePath)\*\*\*.psd1" -ErrorAction Ignore |
+        $path = "${savePath}\*\*\*.psd1"
+        if ($isNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
+        {
+            $path = "${savePath}\*\*.psd1"
+        }
+
+        Get-ChildItem -Path $path -ErrorAction Ignore |
             Select-Object -ExpandProperty 'DirectoryName' |
             Select-Object -Unique |
             Should -HaveCount $expectedCount
@@ -143,6 +184,15 @@ BeforeAll {
         }
     }
 
+    function ThenReturned
+    {
+        param(
+            [int] $ExpectedCount
+        )
+
+        $script:result | Should -HaveCount $ExpectedCount
+    }
+
     function ThenSucceeded
     {
         $Global:Error | Should -BeNullOrEmpty
@@ -158,7 +208,7 @@ BeforeAll {
         Push-Location $script:testRoot
         try
         {
-            Invoke-Prism -Command 'install' @WithParameters | Out-String | Write-Verbose
+            $script:result = Invoke-Prism -Command 'install' @WithParameters
         }
         finally
         {
@@ -178,6 +228,7 @@ Describe 'prism install' {
         $script:failed = $false
         $Global:Error.Clear()
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        $script:result = $null
         New-Item -Path $script:testRoot -ItemType 'Directory' -ErrorAction Ignore
         Push-Location $script:testRoot
     }
@@ -208,8 +259,10 @@ Describe 'prism install' {
                 [pscustomobject]@{ name = 'NoOp'; version = '1.0.0'; repositorySourceLocation = $script:defaultLocation }
             )}) | ConvertTo-Json
         Get-Content -Path 'prism.lock.json' -Raw | Should -Be $expectedContent
+        ThenReturned 1
     }
 
+    # The only way this can happen is if someone manually updates their prism.lock.json file.
     It 'should install multiple versions' {
         GivenPrismFile '{}' # install only cares about prism.lock.json
         GivenLockFile @"
@@ -222,6 +275,7 @@ Describe 'prism install' {
 "@
         WhenInstalling
         ThenInstalled @{ 'Carbon' = @('2.11.1', '2.11.0') }
+        ThenReturned 2
     }
 
     It 'should pass and install to custom PSModules directory' {
@@ -328,8 +382,10 @@ Describe 'prism install' {
 "@
         WhenInstalling
         ThenInstalled @{ 'NoOp' = '1.0.0' }
+        ThenReturned 1
         Mock -CommandName 'Save-Module' -ModuleName 'Prism'
         WhenInstalling
+        ThenReturned 0
         Assert-MockCalled -CommandName 'Save-Module' -ModuleName 'Prism' -Times 0 -Exactly
     }
 
@@ -538,5 +594,73 @@ Describe 'prism install' {
 "@
         WhenInstalling -WithParameters @{ Name = 'Carbon'}
         ThenNotInstalled 'Carbon'
+    }
+
+    Context 'installing nested module' {
+        It 'reduces nesting in module with <_> file' -ForEach @('module.psd1', 'module.psm1') {
+            GivenFile $_
+            GivenPrismFile '{}'
+            GivenLockFile @'
+{
+    "PSModules": [
+        {
+            "name": "NoOp",
+            "version": "1.0.0",
+            "repositorySourceLocation": "https://www.powershellgallery.com/api/v2/"
+        }
+    ]
+}
+'@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0' } -AsNestedModule
+        }
+
+        It 'does not reinstall if already installed' {
+            GivenFile 'module.psd1'
+            GivenPrismFile @"
+{
+    "PSModules": [
+        {
+            "Name": "NoOp",
+            "Version": "1.0.0"
+        }
+    ]
+}
+"@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0' } -AsNestedModule
+            Mock -CommandName 'Save-Module' -ModuleName 'Prism'
+            WhenInstalling
+            Should -Invoke 'Save-Module' -ModuleName 'Prism' -Times 0 -Exactly
+        }
+
+        It 'installs multiple versions' {
+            GivenFile 'module.psd1'
+            GivenPrismFile '{}' # install only cares about prism.lock.json
+            GivenLockFile @"
+{
+    "PSModules": [
+        { "name": "Carbon", "version": "2.11.1", "repositorySourceLocation": "$($script:defaultLocation)" },
+        { "name": "Carbon", "version": "2.11.0", "repositorySourceLocation": "$($script:defaultLocation)" }
+    ]
+}
+"@
+            WhenInstalling
+            ThenInstalled @{ 'Carbon' = @('2.11.1', '2.11.0') } -AsNestedModule
+        }
+
+        It 'installs prerelease modules' {
+            GivenFile 'module.psd1'
+            GivenPrismFile '{}'
+            GivenLockFile @"
+{
+    "PSModules": [
+        { "name": "NoOp", "version": "1.0.0-alpha26", "repositorySourceLocation": "$($script:defaultLocation)" }
+    ]
+}
+"@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0-alpha26' } -AsNestedModule
+        }
     }
 }
