@@ -45,7 +45,10 @@ BeforeAll {
             New-Item -Path $dirPath -ItemType Directory
         }
 
-        New-Item -Path $filePath -ItemType File
+        if (-not (Test-Path -Path $filePath))
+        {
+            New-Item -Path $filePath -ItemType File
+        }
 
         if ($WithContent)
         {
@@ -93,7 +96,11 @@ BeforeAll {
             [switch] $AsNestedModule
         )
 
-        if (-not $In)
+        if ($In)
+        {
+            $In = Join-Path -Path $script:testRoot -ChildPath $In
+        }
+        else
         {
             $In = $script:testRoot
         }
@@ -129,7 +136,9 @@ BeforeAll {
                 $manifestPath = Join-Path -Path $manifestPath -ChildPath "$($moduleName).psd1"
                 $manifestPath | Should -Exist
                 $manifest =
-                    Test-ModuleManifest -Path $manifestPath |
+                    # Test-ModuleManifest caches and doesn't check if a manifest file ever gets updated later.
+                    Start-Job { Test-ModuleManifest -Path $using:manifestPath } |
+                    Receive-Job -AutoRemoveJob -Wait |
                     Add-Member -Name 'SemVer' -MemberType ScriptProperty -Value {
                         $prerelease = $this.PrivateData['PSData']['PreRelease']
                         if ($prerelease)
@@ -597,8 +606,32 @@ Describe 'prism install' {
     }
 
     Context 'installing nested module' {
-        It 'reduces nesting in module with <_> file' -ForEach @('module.psd1', 'module.psm1') {
-            GivenFile $_
+        BeforeEach {
+            # Make sure module.psd1 name matches the name of the parent directory because if a path in the PSModulePath
+            # env var is the path to a module, Get-Module -List returns that module, not any nested modules.
+            GivenFile "$($script:testRoot | Split-Path -Leaf).psd1"
+        }
+
+        It 'reduces nesting' {
+            GivenPrismFile '{}'
+            GivenLockFile @'
+{
+    "PSModules": [
+        {
+            "name": "NoOp",
+            "version": "1.0.0",
+            "repositorySourceLocation": "https://www.powershellgallery.com/api/v2/"
+        }
+    ]
+}
+'@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0' } -AsNestedModule
+        }
+
+        It 'reduces nesting for modules without a manifest' {
+            Remove-Item -Path (Join-Path -Path $script:testRoot -ChildPath '*.psd1')
+            GivenFile "$($script:testRoot | Split-Path -Leaf).psm1"
             GivenPrismFile '{}'
             GivenLockFile @'
 {
@@ -616,7 +649,6 @@ Describe 'prism install' {
         }
 
         It 'does not reinstall if already installed' {
-            GivenFile 'module.psd1'
             GivenPrismFile @"
 {
     "PSModules": [
@@ -635,7 +667,6 @@ Describe 'prism install' {
         }
 
         It 'installs multiple versions' {
-            GivenFile 'module.psd1'
             GivenPrismFile '{}' # install only cares about prism.lock.json
             GivenLockFile @"
 {
@@ -650,7 +681,6 @@ Describe 'prism install' {
         }
 
         It 'installs prerelease modules' {
-            GivenFile 'module.psd1'
             GivenPrismFile '{}'
             GivenLockFile @"
 {
@@ -661,6 +691,59 @@ Describe 'prism install' {
 "@
             WhenInstalling
             ThenInstalled @{ 'NoOp' = '1.0.0-alpha26' } -AsNestedModule
+        }
+
+        It 'installs new version' {
+            GivenPrismFile '{}'
+            GivenLockFile @"
+{
+    "PSModules": [
+        { "name": "NoOp", "version": "1.0.0-alpha26", "repositorySourceLocation": "$($script:defaultLocation)" }
+    ]
+}
+"@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0-alpha26' } -AsNestedModule
+            ThenSucceeded
+            GivenLockFile @"
+{
+    "PSModules": [
+        { "name": "NoOp", "version": "1.0.0", "repositorySourceLocation": "$($script:defaultLocation)" }
+    ]
+}
+"@
+            WhenInstalling
+            ThenSucceeded
+            ThenInstalled @{ 'NoOp' = '1.0.0' } -AsNestedModule
+        }
+
+        It 'validates old version removed' {
+            GivenPrismFile '{}'
+            GivenLockFile @"
+{
+    "PSModules": [
+        { "name": "NoOp", "version": "1.0.0-alpha26", "repositorySourceLocation": "$($script:defaultLocation)" }
+    ]
+}
+"@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0-alpha26' } -AsNestedModule
+            ThenSucceeded
+
+            GivenLockFile @"
+{
+    "PSModules": [
+        { "name": "NoOp", "version": "1.0.0", "repositorySourceLocation": "$($script:defaultLocation)" }
+    ]
+}
+"@
+            Mock -CommandName 'Save-Module' -ModuleName 'Prism'
+            Mock -CommandName 'Remove-Item' `
+                 -ModuleName 'Prism' `
+                 -ParameterFilter { ($Path | Split-Path -Leaf) -eq 'NoOp' }
+            WhenInstalling -ErrorAction SilentlyContinue
+            Should -Not -Invoke 'Save-Module' -ModuleName 'Prism'
+            $Global:Error | Should -Match 'that destination already exists'
         }
     }
 }

@@ -3,7 +3,13 @@
 
 # Prism Changelog
 
+## 0.8.1
+
+Fixed: Prism fails to install new versions of nested modules if old versions are installed.
+
 ## 0.8.0
+
+> Released 18 Nov 2024
 
 ### Nesting Improvements
 
