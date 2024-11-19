@@ -38,7 +38,6 @@ function Install-PrivateModule
         }
 
         $installDirPath = $Configuration.InstallDirectoryPath
-        $privateModulePathWildcard = Join-Path -Path $installDirPath -ChildPath '*'
         $locks = Get-Content -Path $Configuration.LockPath | ConvertFrom-Json
         $locks | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() -ErrorAction Ignore
 
@@ -47,23 +46,48 @@ function Install-PrivateModule
             $locks.PSModules = $locks.PSModules | Where-Object {$_.Name -in $Name}
         }
 
+        $installedModules =
+            & {
+                if ($Configuration.Nested)
+                {
+                    Get-ChildItem -Path $Configuration.InstallDirectoryPath -Recurse | Out-String | Write-Debug
+                    Get-ChildItem -Path (Join-Path -Path $Configuration.InstallDirectoryPath -ChildPath '*\*.psd1') |
+                        ForEach-Object { Get-Module -Name $_.FullName -ListAvailable -ErrorAction Ignore }
+                }
+                else
+                {
+                    $origPSModulePath = $env:PSModulePath
+                    $env:PSModulePath = $Configuration.InstallDirectoryPath
+                    try
+                    {
+                        Write-Debug $env:PSModulePath
+                        Get-Module -ListAvailable -ErrorAction Ignore
+                    }
+                    finally
+                    {
+                        $env:PSModulePath = $origPSModulePath
+                    }
+                }
+            } |
+            Add-Member -Name 'SemVer' -MemberType ScriptProperty -PassThru -Value {
+                $prerelease = $this.PrivateData['PSData']['PreRelease']
+                if ($prerelease)
+                {
+                    $prerelease = "-$($prerelease)"
+                }
+                return "$($this.Version)$($prerelease)"
+            }
+
+            $installedModules | Format-Table -Auto | Out-String | Write-Debug
+
         foreach ($module in $locks.PSModules)
         {
-            $installedModules =
-                Get-Module -Name $module.name -ListAvailable -ErrorAction Ignore |
-                Where-Object 'Path' -Like $privateModulePathWildcard |
-                Add-Member -Name 'SemVer' -MemberType ScriptProperty -PassThru -Value {
-                    $prerelease = $this.PrivateData['PSData']['PreRelease']
-                    if ($prerelease)
-                    {
-                        $prerelease = "-$($prerelease)"
-                    }
-                    return "$($this.Version)$($prerelease)"
-                }
-
-            $installedModule = $installedModules | Where-Object 'SemVer' -EQ $module.version
+            $module | Format-List | Out-String | Write-Debug
+            $installedModule =
+                $installedModules | Where-Object 'Name' -EQ $module.Name | Where-Object 'SemVer' -EQ $module.version
             if ($installedModule)
             {
+                Write-Debug 'Module already installed.'
                 continue
             }
 
@@ -78,8 +102,9 @@ function Install-PrivateModule
             if (-not $repoName)
             {
                 $msg = "PowerShell repository at ""$($module.repositorySourceLocation)"" does not exist. Use " +
-                        '"Get-PSRepository" to see the current list of repositories, "Register-PSRepository" ' +
-                        'to add a new repository, or "Set-PSRepository" to update an existing repository.'
+                       '"Get-PSRepository" to see the current list of repositories, "Register-PSRepository" ' +
+                       'to add a new repository, or "Set-PSRepository" to update an existing repository.'
+                Write-Debug "Unknown repo."
                 Write-Error $msg
                 continue
             }
@@ -89,6 +114,31 @@ function Install-PrivateModule
                 New-Item -Path $installDirPath -ItemType 'Directory' -Force | Out-Null
             }
 
+            # How many versions of this module will we be installing?
+            $moduleVersionCount = ($locks.PSModules | Where-Object 'Name' -EQ $module.name | Measure-Object).Count
+
+            $nestedSingleVersion = $Configuration.Nested -and $moduleVersionCount -eq 1
+            Write-Debug "Nested               $($Configuration.Nested)"
+            Write-Debug "moduleVersionCount   ${moduleVersionCount}"
+            Write-Debug "nestedSingleVersion  ${nestedSingleVersion}"
+
+            $moduleDirPath = Join-Path -Path $installDirPath -ChildPath $module.Name
+            Write-Debug "moduleDirPath        ${moduleDirPath}"
+            if ($nestedSingleVersion -and (Test-Path -Path $moduleDirPath))
+            {
+                Write-Debug "Removing ${moduleDirPath}"
+                Remove-Item -Path $moduleDirPath -Recurse -Force
+                if (Test-Path -Path $moduleDirPath)
+                {
+                    $msg = "Failed to save PowerShell module ""$($module.name)"" $($module.version) to " +
+                           "destination ""${moduleDirPath}"" because that destination already exists and deletion " +
+                           'failed.'
+                    Write-Debug "Failed to delete module."
+                    Write-Error -Message $msg -ErrorAction $ErrorActionPreference
+                    continue
+                }
+            }
+
             Save-Module -Name $module.name `
                         -Path $installDirPath `
                         -RequiredVersion $module.version `
@@ -96,13 +146,10 @@ function Install-PrivateModule
                         -Repository $repoName `
                         @pkgMgmtPrefs
 
-            # How many versions of this module will we be installing?
-            $moduleVersionCount = ($locks.PSModules | Where-Object 'Name' -EQ $module.name | Measure-Object).Count
-
             # PowerShell has a 10 directory limit for nested modules, so reduce the number of nested directories
             # when installing a nested module by installing directly in the module root directory and moving
             # everything out of the version module directory.
-            if ($Configuration.Nested -and $moduleVersionCount -eq 1)
+            if ($nestedSingleVersion)
             {
                 $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name
                 $versionDirName = $module.version
