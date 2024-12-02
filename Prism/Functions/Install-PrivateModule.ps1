@@ -48,14 +48,6 @@ function Install-PrivateModule
 
         $installedModules =
             & {
-                if ($Configuration.Nested)
-                {
-                    Get-ChildItem -Path $Configuration.InstallDirectoryPath -Recurse | Out-String | Write-Debug
-                    Get-ChildItem -Path (Join-Path -Path $Configuration.InstallDirectoryPath -ChildPath '*\*.psd1') |
-                        ForEach-Object { Get-Module -Name $_.FullName -ListAvailable -ErrorAction Ignore }
-                }
-                else
-                {
                     $origPSModulePath = $env:PSModulePath
                     $env:PSModulePath = $Configuration.InstallDirectoryPath
                     try
@@ -67,7 +59,6 @@ function Install-PrivateModule
                     {
                         $env:PSModulePath = $origPSModulePath
                     }
-                }
             } |
             Add-Member -Name 'SemVer' -MemberType ScriptProperty -PassThru -Value {
                 $prerelease = $this.PrivateData['PSData']['PreRelease']
@@ -146,9 +137,8 @@ function Install-PrivateModule
                         -Repository $repoName `
                         @pkgMgmtPrefs
 
-            # PowerShell has a 10 directory limit for nested modules, so reduce the number of nested directories
-            # when installing a nested module by installing directly in the module root directory and moving
-            # everything out of the version module directory.
+            # Windows has a 260 character limit for path length. Reduce paths by removing extraneous version
+            # directories.
             if ($nestedSingleVersion)
             {
                 $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name
