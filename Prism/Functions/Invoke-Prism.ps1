@@ -144,11 +144,23 @@ function Invoke-Prism
                     $lockExtension = ''
                 }
 
+                $isNested = (Test-Path -Path (Join-Path -Path $prismJsonFile.DirectoryName -ChildPath '*.psd1')) -or `
+                            (Test-Path -Path (Join-Path -Path $prismJsonFile.DirectoryName -ChildPath '*.psm1'))
+
+                $defaultInstallDirName = 'PSModules'
+                if ($isNested)
+                {
+                    $defaultInstallDirName = 'Modules'
+                }
+
                 $ignore = @{ 'ErrorAction' = 'Ignore' }
                 # public configuration that users can customize.
                 # Add-Member doesn't return an object if the member already exists, so these can't be part of one pipeline.
                 $config | Add-Member -Name 'PSModules' -MemberType NoteProperty -Value @() @ignore
-                $config | Add-Member -Name 'PSModulesDirectoryName' -MemberType NoteProperty -Value 'PSModules' @ignore
+                $config | Add-Member -Name 'PSModulesDirectoryName' `
+                                     -MemberType NoteProperty `
+                                     -Value $defaultInstallDirName `
+                                     @ignore
 
                 if ($config.PSModulesDirectoryName.Contains('\') -or `
                     $config.PSModulesDirectoryName.Contains('/') -or `
@@ -161,15 +173,9 @@ function Invoke-Prism
                     return
                 }
 
-                $isNested = (Test-Path -Path (Join-Path -Path $prismJsonFile.DirectoryName -ChildPath '*.psd1')) -or `
-                            (Test-Path -Path (Join-Path -Path $prismJsonFile.DirectoryName -ChildPath '*.psm1'))
-
                 $installDirPath =
                     Join-Path -Path $prismJsonFile.DirectoryName -ChildPath $config.PSModulesDirectoryName
-                if ($isNested -or $config.PSModulesDirectoryName -eq '.')
-                {
-                    $installDirPath = $prismJsonFile.DirectoryName
-                }
+                $installDirPath = [IO.Path]::GetFullPath($installDirPath)
 
                 $lockPath =
                     Join-Path -Path ($prismJsonPath |
