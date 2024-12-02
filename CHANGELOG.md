@@ -3,7 +3,16 @@
 
 # Prism Changelog
 
+## 0.9.0
+
+Turns out, the 10 directory nesting limit for nested modules is a scope stack limit, not a directory limit. This version
+of Prism now installs nested modules into a "Modules" directory instead of directly in the module directory. You can
+preserve the old behavior and install modules directly in the module directory by setting the "PSModulesDirectoryName"
+configuration property in the prism.json file to `.`.
+
 ## 0.8.1
+
+> Released 19 Nov 2024
 
 Fixed: Prism fails to install new versions of nested modules if old versions are installed.
 

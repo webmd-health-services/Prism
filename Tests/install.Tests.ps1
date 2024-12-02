@@ -82,17 +82,15 @@ BeforeAll {
 
     function ThenInstalled
     {
-        [CmdletBinding(DefaultParameterSetName='NonNested')]
+        [CmdletBinding()]
         param(
             [Parameter(Mandatory, Position=0)]
             [hashtable] $Module,
 
             [String] $In,
 
-            [Parameter(ParameterSetName='NonNested')]
             [String] $UsingDirName,
 
-            [Parameter(Mandatory, ParameterSetName='Nested')]
             [switch] $AsNestedModule
         )
 
@@ -108,15 +106,15 @@ BeforeAll {
         if (-not $UsingDirName)
         {
             $UsingDirName = 'PSModules'
+
+            if ($AsNestedModule)
+            {
+                $UsingDirName = 'Modules'
+            }
         }
 
-        $isNestedModule = $PSCmdlet.ParameterSetName -eq 'Nested'
-
-        $savePath = $In
-        if (-not $isNestedModule)
-        {
-            $savePath = Join-Path -Path $In -ChildPath $UsingDirName
-        }
+        $savePath = Join-Path -Path $In -ChildPath $UsingDirName
+        $savePath = [IO.Path]::GetFullPath($savePath)
 
         # Make sure *only* the modules we requested are installed.
         $expectedCount = 0
@@ -128,7 +126,7 @@ BeforeAll {
                 $expectedCount += 1
                 $version,$prerelease = $semver -split '-'
                 $manifestPath = Join-Path -Path $modulePath -ChildPath $version
-                if ($isNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
+                if ($AsNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
                 {
                     $manifestPath | Should -Not -Exist -Because 'should remove version directory for nested module'
                     $manifestPath = $manifestPath | Split-Path -Parent
@@ -154,7 +152,7 @@ BeforeAll {
         }
 
         $path = "${savePath}\*\*\*.psd1"
-        if ($isNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
+        if ($AsNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
         {
             $path = "${savePath}\*\*.psd1"
         }
@@ -296,12 +294,33 @@ Describe 'prism install' {
                     "Version": "1.0.0"
                 }
             ],
-            "PSModulesDirectoryName": "Modules"
+            "PSModulesDirectoryName": "PSM1"
         }
 '@
         GivenLockFile $script:latestNoOpLockFile
         WhenInstalling
-        ThenInstalled @{ 'NoOp' = '1.0.0' } -UsingDirName 'Modules'
+        ThenInstalled @{ 'NoOp' = '1.0.0' } -UsingDirName 'PSM1'
+    }
+
+    It 'does not install in a subdirectory' {
+        GivenPrismFile @'
+{
+    "PSModulesDirectoryName": "."
+}
+'@
+        GivenLockFile @'
+{
+    "PSModules": [
+        {
+            "name": "NoOp",
+            "version": "1.0.0",
+            "repositorySourceLocation": "https://www.powershellgallery.com/api/v2/"
+        }
+    ]
+}
+'@
+        WhenInstalling
+        ThenInstalled @{ 'NoOp' = '1.0.0' } -UsingDirName '.'
     }
 
     It 'should install prerelease versions' {
@@ -744,6 +763,48 @@ Describe 'prism install' {
             WhenInstalling -ErrorAction SilentlyContinue
             Should -Not -Invoke 'Save-Module' -ModuleName 'Prism'
             $Global:Error | Should -Match 'that destination already exists'
+        }
+
+        It 'customizes module directory name' {
+            GivenPrismFile @'
+{
+    "PSModulesDirectoryName": "PSM1"
+}
+'@
+            GivenLockFile @'
+{
+"PSModules": [
+    {
+        "name": "NoOp",
+        "version": "1.0.0",
+        "repositorySourceLocation": "https://www.powershellgallery.com/api/v2/"
+    }
+]
+}
+'@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0' } -AsNestedModule -UsingDirName 'PSM1'
+        }
+
+        It 'does not install in a subdirectory' {
+            GivenPrismFile @'
+{
+    "PSModulesDirectoryName": "."
+}
+'@
+            GivenLockFile @'
+{
+"PSModules": [
+    {
+        "name": "NoOp",
+        "version": "1.0.0",
+        "repositorySourceLocation": "https://www.powershellgallery.com/api/v2/"
+    }
+]
+}
+'@
+            WhenInstalling
+            ThenInstalled @{ 'NoOp' = '1.0.0' } -AsNestedModule -UsingDirName '.'
         }
     }
 }
