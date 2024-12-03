@@ -108,17 +108,21 @@ a `prism.lock.json` file, with the specific versions of each module to install. 
 install` will only install the module versions listed in the lock file. To update the versions in the lock file to
 newer versions or to reflect changes made to the `prism.json` file, run `prism update`.
 
-### Output Directory
+### Where Prism Installs/Saves Modules
 
-Modules will always be saved in the same directory as the "prism.json" file, in a directory named "PSModules". You can
-customize this directory name with the `PSModulesDirectoryName` option in your `prism.json` file:
+Modules will always be saved in the same directory as the "prism.json" file, in a directory named "PSModules". If
+installing nested modules for a module (i.e. the install directory contains a .psd1 or .psm1 file), modules are saved to
+a "Modules" directory. You can customize this directory name with the `PSModulesDirectoryName` option in your
+`prism.json` file:
 
 ```json
 {
     "PSModules": [],
-    "PSModulesDirectoryName": "Modules"
+    "PSModulesDirectoryName": "SomeOtherDirName"
 }
 ```
+
+To install modules in the same directory as the "prism.json" file, use `.` as the "PSModulesDirectoryName" value.
 
 To put the PSModules directory in a *different* directory, put a "prism.json" file in that directory. Use the "prism"
 command's `-Recurse` switch to run prism against every prism.json file under the current directory.
@@ -139,16 +143,7 @@ Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'PSModules\Whiskey
 Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Whiskey' -Resolve)
 ```
 
-## Using Nested Modules in a Module
-
-### Installing
-
-PowerShell has a 10 directory nested limit for nested modules. When using nested modules in a module, in order to avoid
-errors about too much nesting, Prism will install the modules directly into your module directory and will also *not*
-install modules into a version-specific directory. Prism automatically detects when installing into a module directory
-by looking for a .psd1 or .psm1 file in the same directory as the prism.json file.
-
-### Importing
+### Importing Nested Modules
 
 To import and use a private, nested module installed by Prism, use `Import-Module` and pass the path to the module
 instead of a module name. Use `Join-Path` and join the path to your module's directory with the relative path to the
@@ -168,14 +163,14 @@ Import-Module -Name (Join-Path -Path $script:moduleDirPath -ChildPath 'Whiskey' 
 ***DO*** always use the `Import-Module` cmdlet's `Alias`, `Cmdlet`, and `Function` parameters to explicitly list what
 commands your script is importing and using. It makes upgrading easier when you know what commands you're using.
 
-***DO NOT*** depend on PowerShell's automatic module loading. That functionality won't see the private modules in
-"PSModules".
+***DO NOT*** depend on PowerShell's automatic module loading. That functionality won't see the private modules Prism
+installs.
 
 #### When Writing Modules
 
 ***DO*** ship your module's dependencies as nested modules. Use Prism to manage these as it structures dependencies to
-avoid deep nesting errors. Import dependencies from that private location. A module can have its own version of a module
-loaded privately.
+avoid long directory paths. Import dependencies from that private location. A module can have its own version of a
+module loaded privately.
 
 ***DO NOT*** use the `NestedModules` module manifest property. Use an explicit `Import-Module` in your root module to
 import dependencies saved inside your module.
