@@ -122,7 +122,10 @@ function Update-ModuleLock
                 Write-Debug "  curStep   $($curStep)"
                 $moduleToInstall =
                     $modules | Select-Module -Name $module.Name @optionalParams | Select-Object -First 1
-                if (-not $moduleToInstall)
+                # Find-Module doesn't return prerelease modules by default, so if allow prerlease is set, we need to do
+                # an explicit search. Otherwise, if the most recent version found by the first call to Find-Module
+                # matches the user's wildcard, the prerelease version won't be found and used.
+                if (-not $moduleToInstall -or $allowPrerelease)
                 {
                     $status = "Find-Module -Name '$($module.Name)' -AllVersions"
                     if ($allowPrerelease)
