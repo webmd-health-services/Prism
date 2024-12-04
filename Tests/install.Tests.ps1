@@ -120,18 +120,22 @@ BeforeAll {
         $expectedCount = 0
         foreach ($moduleName in $Module.Keys)
         {
+            $multipleVersions = ($Module[$moduleName] | Measure-Object).Count -gt 1
+
             $modulePath = Join-Path -Path $savePath -ChildPath $moduleName
             foreach ($semver in $Module[$moduleName])
             {
                 $expectedCount += 1
                 $version,$prerelease = $semver -split '-'
-                $manifestPath = Join-Path -Path $modulePath -ChildPath $version
-                if ($AsNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
+                $manifestPath = Join-Path -Path $modulePath -ChildPath "${moduleName}.psd1"
+                if ($multipleVersions)
                 {
-                    $manifestPath | Should -Not -Exist -Because 'should remove version directory for nested module'
-                    $manifestPath = $manifestPath | Split-Path -Parent
+                    $manifestPath |
+                        Should -Not -Exist -Because 'should use version directory for module with multiple versions'
+                    $manifestPath = Join-Path -Path ($manifestPath | Split-Path -Parent) `
+                                              -ChildPath "${version}\$($manifestPath | Split-Path -Leaf)"
                 }
-                $manifestPath = Join-Path -Path $manifestPath -ChildPath "$($moduleName).psd1"
+
                 $manifestPath | Should -Exist
                 $manifest =
                     # Test-ModuleManifest caches and doesn't check if a manifest file ever gets updated later.
@@ -151,13 +155,7 @@ BeforeAll {
             }
         }
 
-        $path = "${savePath}\*\*\*.psd1"
-        if ($AsNestedModule -and ($Module[$moduleName] | Measure-Object).Count -eq 1)
-        {
-            $path = "${savePath}\*\*.psd1"
-        }
-
-        Get-ChildItem -Path $path -ErrorAction Ignore |
+        Get-ChildItem -Path "${savePath}\*\*.psd1", "${savePath}\*\*.*.*\*.psd1" -ErrorAction Ignore |
             Select-Object -ExpandProperty 'DirectoryName' |
             Select-Object -Unique |
             Should -HaveCount $expectedCount

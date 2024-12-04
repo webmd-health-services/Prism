@@ -3,7 +3,13 @@
 
 # Prism Changelog
 
-## 0.9.1
+## 0.10.0
+
+### Changed
+
+Reducing directory depth for all modules not just internal, private, nested modules.
+
+### Fixed
 
 Fixed: if the latest non-prerelease version of a module matches the wildcard in the "prism.json" file and the latest
 version is a prerelease version and the `AllowPrerelease` flag is `true` in the "prism.json" file, Prism fails to pin
