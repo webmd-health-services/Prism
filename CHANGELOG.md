@@ -3,7 +3,21 @@
 
 # Prism Changelog
 
+## 0.10.0
+
+### Changed
+
+Reducing directory depth for all modules not just internal, private, nested modules.
+
+### Fixed
+
+Fixed: if the latest non-prerelease version of a module matches the wildcard in the "prism.json" file and the latest
+version is a prerelease version and the `AllowPrerelease` flag is `true` in the "prism.json" file, Prism fails to pin
+to the prerelease version.
+
 ## 0.9.0
+
+> Released 3 Dec 2024
 
 Turns out, the 10 directory nesting limit for nested modules is a scope stack limit, not a directory limit. This version
 of Prism now installs nested modules into a "Modules" directory instead of directly in the module directory. You can

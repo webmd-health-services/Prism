@@ -108,14 +108,14 @@ function Install-PrivateModule
             # How many versions of this module will we be installing?
             $moduleVersionCount = ($locks.PSModules | Where-Object 'Name' -EQ $module.name | Measure-Object).Count
 
-            $nestedSingleVersion = $Configuration.Nested -and $moduleVersionCount -eq 1
+            $singleVersion = $moduleVersionCount -eq 1
             Write-Debug "Nested               $($Configuration.Nested)"
             Write-Debug "moduleVersionCount   ${moduleVersionCount}"
-            Write-Debug "nestedSingleVersion  ${nestedSingleVersion}"
+            Write-Debug "singleVersion  ${singleVersion}"
 
             $moduleDirPath = Join-Path -Path $installDirPath -ChildPath $module.Name
             Write-Debug "moduleDirPath        ${moduleDirPath}"
-            if ($nestedSingleVersion -and (Test-Path -Path $moduleDirPath))
+            if ($singleVersion -and (Test-Path -Path $moduleDirPath))
             {
                 Write-Debug "Removing ${moduleDirPath}"
                 Remove-Item -Path $moduleDirPath -Recurse -Force
@@ -139,7 +139,7 @@ function Install-PrivateModule
 
             # Windows has a 260 character limit for path length. Reduce paths by removing extraneous version
             # directories.
-            if ($nestedSingleVersion)
+            if ($singleVersion)
             {
                 $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name
                 $versionDirName = $module.version
