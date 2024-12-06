@@ -4,7 +4,8 @@ Build:
     Path: Prism\Prism.psd1
     Prerelease:
     - main: ""
-    - "*": rc$(WHISKEY_BUILD_NUMBER)
+    - "*": rc1
+    IncrementPrereleaseVersion: true
 
 # Update the AppVeyor build/version number.
 - Exec:
