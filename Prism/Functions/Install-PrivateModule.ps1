@@ -139,7 +139,7 @@ function Install-PrivateModule
 
             # Windows has a 260 character limit for path length. Reduce paths by removing extraneous version
             # directories.
-            if ($singleVersion)
+            if ($singleVersion -and -not $Configuration.PSFlattenModules)
             {
                 $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name
                 $versionDirName = $module.version

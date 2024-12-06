@@ -127,6 +127,19 @@ To install modules in the same directory as the "prism.json" file, use `.` as th
 To put the PSModules directory in a *different* directory, put a "prism.json" file in that directory. Use the "prism"
 command's `-Recurse` switch to run prism against every prism.json file under the current directory.
 
+### Installation Directory Structure
+
+By default, PowerShell supports installing multiple versions of a module side-by-side by installing a module into a
+directory named after the module's version number. Because Windows has a 260 character limit on paths, Prism instead
+flattens modules on installation by removing this versioned directory. You can prevent Prism from flattening the
+installation location by setting the `PSFlattenModules` configuration setting to `false`:
+
+```json
+{
+  "PSFlattenModules": false
+}
+```
+
 ## Using Private Modules
 
 ### Importing

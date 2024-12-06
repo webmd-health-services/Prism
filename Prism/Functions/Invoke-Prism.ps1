@@ -161,6 +161,7 @@ function Invoke-Prism
                                      -MemberType NoteProperty `
                                      -Value $defaultInstallDirName `
                                      @ignore
+                $config | Add-Member -Name 'PSFlattenModules' -MemberType NoteProperty -Value $false @ignore
 
                 if ($config.PSModulesDirectoryName.Contains('\') -or `
                     $config.PSModulesDirectoryName.Contains('/') -or `

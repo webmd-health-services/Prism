@@ -91,7 +91,9 @@ BeforeAll {
 
             [String] $UsingDirName,
 
-            [switch] $AsNestedModule
+            [switch] $AsNestedModule,
+
+            [switch] $InVersionedDirectory
         )
 
         if ($In)
@@ -128,10 +130,9 @@ BeforeAll {
                 $expectedCount += 1
                 $version,$prerelease = $semver -split '-'
                 $manifestPath = Join-Path -Path $modulePath -ChildPath "${moduleName}.psd1"
-                if ($multipleVersions)
+                if ($multipleVersions -or $InVersionedDirectory)
                 {
-                    $manifestPath |
-                        Should -Not -Exist -Because 'should use version directory for module with multiple versions'
+                    $manifestPath | Should -Not -Exist -Because 'should use version directory'
                     $manifestPath = Join-Path -Path ($manifestPath | Split-Path -Parent) `
                                               -ChildPath "${version}\$($manifestPath | Split-Path -Leaf)"
                 }
@@ -620,6 +621,27 @@ Describe 'prism install' {
 "@
         WhenInstalling -WithParameters @{ Name = 'Carbon'}
         ThenNotInstalled 'Carbon'
+    }
+
+    It 'installs in versioned directory' {
+        GivenPrismFile @'
+{
+    "PSFlattenModules": true
+}
+'@
+        GivenLockFile @"
+{
+    "PSModules":  [
+        {
+            "name":  "NoOp",
+            "version":  "1.0.0",
+            "repositorySourceLocation":  "$($script:defaultLocation)"
+        }
+    ]
+}
+"@
+        WhenInstalling
+        ThenInstalled @{ 'NoOp' = '1.0.0' } -InVersionedDirectory
     }
 
     Context 'installing nested module' {
