@@ -3,7 +3,16 @@
 
 # Prism Changelog
 
+## 0.11.0
+
+### Added
+
+Added "FlattenModules" configuration option to control whether or not Prism should flatten a module's directory
+structure when installing, i.e. preserve the versioned directory PowerShell installs a module to by default.
+
 ## 0.10.0
+
+> Released 4 Dec 2024
 
 ### Changed
 
