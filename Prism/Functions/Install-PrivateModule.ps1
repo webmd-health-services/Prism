@@ -143,7 +143,7 @@ function Install-PrivateModule
             {
                 $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name
                 $versionDirName = $module.version
-                if ($versionDirName -match '^(\d+\.\d+\.\d+)')
+                if ($versionDirName -match '^(\d+\.\d+\.\d+(?:\.\d+)?)')
                 {
                     $versionDirName = $Matches[1]
                 }

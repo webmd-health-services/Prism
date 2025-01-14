@@ -3,6 +3,10 @@
 
 # Prism Changelog
 
+## 0.11.1
+
+Fixed: `prism install` fails to install modules that use a NuGet 4-segment version number (e.g. 2.5.0.214).
+
 ## 0.11.0
 
 ### Added
