@@ -835,4 +835,21 @@ Describe 'prism install' {
             ThenInstalled @{ 'NoOp' = '1.0.0' } -AsNestedModule -UsingDirName '.'
         }
     }
+
+    It 'installs modules that use NuGet versioning which contains a 4th version segment' {
+        GivenPrismFile '{}'
+        GivenLockFile @'
+{
+    "PSModules": [
+        {
+            "name": "SwisPowerShell",
+            "version": "2.5.0.214",
+            "repositorySourceLocation": "https://www.powershellgallery.com/api/v2/"
+        }
+    ]
+}
+'@
+        WhenInstalling
+        ThenInstalled @{ 'SwisPowerShell' = '2.5.0.214' }
+    }
 }
