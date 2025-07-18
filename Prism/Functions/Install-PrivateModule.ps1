@@ -149,7 +149,26 @@ function Install-PrivateModule
                 }
                 $moduleVersionPath = Join-Path -Path $modulePath -ChildPath $versionDirName
                 Get-ChildItem -Path $moduleVersionPath -Force | Copy-Item -Destination $modulePath -Recurse
-                Get-Item -Path $moduleVersionPath | Remove-Item -Force -Recurse
+                # Have to retry deleting because some tools prevent the first deletion attempt.
+                # Humans think things hang after about 10 seconds
+                $tryFor = New-TimeSpan -Seconds 9
+                $timer = [Diagnostics.Stopwatch]::StartNew()
+                $tryCount = 0
+                do
+                {
+                    Remove-Item -Path $moduleVersionPath -Force -Recurse -ErrorAction Ignore
+                    $tryCount++
+                    if (-not (Test-Path -Path $moduleVersionPath))
+                    {
+                        $msg = "Took $([int]$timer.Elapsed.Totalseconds)s $($timer.Elapsed.Milliseconds)ms and " +
+                               "${tryCount} attempts to delete ""${moduleVersionPath}""."
+                        Write-Debug $msg
+                        break
+                    }
+                    # The shortest amount of time perceivable by humans.
+                    Start-Sleep -Milliseconds 100
+                }
+                while ($timer.Elapsed -lt $tryFor)
             }
 
             $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name | Resolve-Path -Relative
