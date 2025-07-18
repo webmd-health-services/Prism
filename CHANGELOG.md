@@ -3,11 +3,20 @@
 
 # Prism Changelog
 
+## 0.11.2
+
+Fixed: `prism install` can leave private module directories in an unusable state when it installs modules into a
+directory being watched or scanned by other processes.
+
 ## 0.11.1
+
+> Released 14 Jan 2025
 
 Fixed: `prism install` fails to install modules that use a NuGet 4-segment version number (e.g. 2.5.0.214).
 
 ## 0.11.0
+
+> Released 19 Dec 2024
 
 ### Added
 

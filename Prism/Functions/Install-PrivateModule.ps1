@@ -148,8 +148,8 @@ function Install-PrivateModule
                     $versionDirName = $Matches[1]
                 }
                 $moduleVersionPath = Join-Path -Path $modulePath -ChildPath $versionDirName
-                Get-ChildItem -Path $moduleVersionPath -Force | Move-Item -Destination $modulePath
-                Get-Item -Path $moduleVersionPath | Remove-Item
+                Get-ChildItem -Path $moduleVersionPath -Force | Copy-Item -Destination $modulePath -Recurse
+                Get-Item -Path $moduleVersionPath | Remove-Item -Force -Recurse
             }
 
             $modulePath = Join-Path -Path $installDirPath -ChildPath $module.name | Resolve-Path -Relative
