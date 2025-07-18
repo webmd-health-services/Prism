@@ -3,7 +3,14 @@
 
 # Prism Changelog
 
+## 0.11.3
+
+Fixed: `prism install` can fail to delete when flattening module directories when installing modules into a directory
+being watched or scanned by other processes.
+
 ## 0.11.2
+
+> Released 18 Jul 2025
 
 Fixed: `prism install` can leave private module directories in an unusable state when it installs modules into a
 directory being watched or scanned by other processes.
