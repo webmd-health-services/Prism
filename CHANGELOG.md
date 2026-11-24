@@ -3,6 +3,12 @@
 
 # Prism Changelog
 
+## 0.12.0
+
+* Fixed: Prism fails to work with PowerShellGet 2.2.6.
+* Prism now works with PackageManagement greater than 1.3.2 and less than 2.0 and PowerShellGet greater than 2.1.5 and
+  less than 3.0.
+
 ## 0.11.3
 
 Fixed: `prism install` can fail to delete when flattening module directories when installing modules into a directory
