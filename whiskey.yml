@@ -5,34 +5,30 @@ Build:
     Prerelease:
     - main: ""
     - "*": rc1
-    PowerShellModuleName: Prism
     IncrementPrereleaseVersion: true
 
 # Update the AppVeyor build/version number.
-- Exec:
-      OnlyBy: BuildServer
-      Path: appveyor
-      Argument: [ UpdateBuild, -Version, "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)" ]
+- Exec: appveyor UpdateBuild -Version "$(WHISKEY_SEMVER2)+$(WHISKEY_BUILD_NUMBER)"
+  .OnlyBy: BuildServer
 
 # Dot-sourcing files is expensive. Move all functions into .psm1 file to improve import speed. Do this before testing
 # to ensure the module still works.
 - MergeFile:
-    OnlyBy: BuildServer
+    .OnlyBy: BuildServer
     # Builds run twice on some serves. Only run this step if the module hasn't been merged yet.
-    IfExists: Prism\Functions\*.ps1
+    .IfExists: Prism\Functions\*.ps1
     Path:
     - Prism\Functions\*.ps1
     DestinationPath: Prism\Prism.psm1
     DeleteSourceFiles: true
     TextSeparator: "$(NewLine)$(NewLine)"
 
-- PowerShell:
-    OnlyDuring: Clean
-    Path: reset.ps1
+- PowerShell: .\reset.ps1
+  .OnlyDuring: Clean
 
 # Build runs twice on some servers, so delete any ZIP file created by another build.
 - Delete:
-    Path: .output\*.zip
+    Path: $(WHISKEY_OUTPUT_DIRECTORY)\*.zip
 
 - CopyFile:
     Path:
@@ -43,35 +39,24 @@ Build:
     DestinationDirectory: Prism
 
 - Zip:
-    ArchivePath: .output\Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
+    ArchivePath: $(WHISKEY_OUTPUT_DIRECTORY)\Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip
     Path:
     - Prism
     Exclude:
     - "*.pdb"
     - "*.orig"
 
-- Exec:
-    OnlyBy: BuildServer
-    Path: appveyor
-    Argument: [ 'PushArtifact', '.output/Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip', '-DeploymentName', 'GitHub' ]
+- Exec: appveyor PushArtifact '$(WHISKEY_OUTPUT_DIRECTORY)/Prism-$(WHISKEY_SEMVER2_NO_BUILD_METADATA).zip' '-DeploymentName' 'GitHub'
+  .OnlyBy: BuildServer
 
-- Exec:
-    OnlyBy: BuildServer
-    Path: appveyor
-    Argument: [ 'PushArtifact', 'Scripts/init.ps1', '-DeploymentName', 'GitHub' ]
+- Exec: appveyor PushArtifact 'Scripts/init.ps1' -DeploymentName 'GitHub'
+  .OnlyBy: BuildServer
 
 - PublishPowerShellModule:
     Path: Prism
 
-- Exec:
-    OnlyBy: BuildServer
-    Path: appveyor
-    Argument: [
-        'PushArtifact',
-        '.output/Prism.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg',
-        '-DeploymentName',
-        'PowerShellGallery'
-    ]
+- Exec: appveyor PushArtifact '$(WHISKEY_OUTPUT_DIRECTORY)/Prism.$(WHISKEY_SEMVER2_NO_BUILD_METADATA).nupkg' -DeploymentName 'PowerShellGallery'
+  .OnlyBy: BuildServer
 
 - Pester:
     Configuration:
