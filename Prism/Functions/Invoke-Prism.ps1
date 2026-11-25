@@ -67,13 +67,13 @@ function Invoke-Prism
 
         Import-Module -Name 'PackageManagement' `
                       -MinimumVersion '1.3.2' `
-                      -MaximumVersion '1.4.8.1' `
+                      -MaximumVersion '1.99' `
                       -Global `
                       -ErrorAction Stop `
                       @pkgMgmtPrefs
         Import-Module -Name 'PowerShellGet' `
-                      -MinimumVersion '2.0.0' `
-                      -MaximumVersion '2.2.5' `
+                      -MinimumVersion '2.1.5' `
+                      -MaximumVersion '2.99' `
                       -Global `
                       -ErrorAction Stop `
                       @pkgMgmtPrefs

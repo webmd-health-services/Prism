@@ -43,15 +43,17 @@ BeforeAll {
 
     function ThenPackageManagementModulesImported
     {
+        # See Scripts/init.ps1.
         Get-Module -Name 'PackageManagement' |
             Where-Object 'Version' -ge ([Version]'1.3.2') |
-            Where-Object 'Version' -le ([Version]'1.4.8.1') |
-            Should -Not -BeNullOrEmpty -Because 'should import PackageManagement 1.3.2 - 1.4.8.1'
+            Where-Object 'Version' -lt ([Version]'2.0') |
+            Should -Not -BeNullOrEmpty -Because 'should import PackageManagement 1.3.2 < 2.0'
 
+        # See Scripts/init.ps1.
         Get-Module -Name 'PowerShellGet' |
-            Where-Object 'Version' -ge ([Version]'2.0.0') |
-            Where-Object 'Version' -le ([Version]'2.2.5') |
-            Should -Not -BeNullOrEmpty -Because 'should import PowerShellGet 2.0.0 - 2.2.5'
+            Where-Object 'Version' -ge ([Version]'2.1.5') |
+            Where-Object 'Version' -lt ([Version]'3.0') |
+            Should -Not -BeNullOrEmpty -Because 'should import PowerShellGet 2.1.5 < 3.0'
     }
 
     function ThenRanCommand

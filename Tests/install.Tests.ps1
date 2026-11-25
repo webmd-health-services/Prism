@@ -9,10 +9,10 @@ BeforeAll {
     $script:moduleList = @()
     $script:failed = $false
     $script:testNum = 0
-    $script:origProgressPref = $Global:ProgressPreference
-    $script:origVerbosePref = $Global:VerbosePreference
-    $script:origDebugPref = $Global:DebugPreference
-    $Global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
+    $script:origProgressPref = $global:ProgressPreference
+    $script:origVerbosePref = $global:VerbosePreference
+    $script:origDebugPref = $global:DebugPreference
+    $global:ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
     $script:result = $null
     $script:latestNoOpModule = Find-Module -Name 'NoOp' | Select-Object -First 1
     $script:defaultLocation =
@@ -201,7 +201,7 @@ BeforeAll {
 
     function ThenSucceeded
     {
-        $Global:Error | Should -BeNullOrEmpty
+        $global:Error | Should -BeNullOrEmpty
     }
 
     function WhenInstalling
@@ -224,7 +224,7 @@ BeforeAll {
 }
 
 AfterAll {
-    $Global:ProgressPreference = $script:origProgressPref
+    $global:ProgressPreference = $script:origProgressPref
 }
 
 Describe 'prism install' {
@@ -232,7 +232,7 @@ Describe 'prism install' {
         $script:testRoot = $null
         $script:moduleList = @()
         $script:failed = $false
-        $Global:Error.Clear()
+        $global:Error.Clear()
         $script:testRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
         $script:result = $null
         New-Item -Path $script:testRoot -ItemType 'Directory' -ErrorAction Ignore
@@ -240,8 +240,8 @@ Describe 'prism install' {
     }
 
     AfterEach {
-        $Global:DebugPreference = $script:origDebugPref
-        $Global:VerbosePreference = $script:origVerbosePref
+        $global:DebugPreference = $script:origDebugPref
+        $global:VerbosePreference = $script:origVerbosePref
         Remove-Item -Path 'env:PRISM_*' -ErrorAction Ignore
         Pop-Location
     }
@@ -352,7 +352,7 @@ Describe 'prism install' {
         GivenPrismFile '{}'
         GivenLockFile $script:latestNoOpLockFile
         $env:PRISM_DISABLE_DEEP_VERBOSE = 'True'
-        $Global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
+        $global:VerbosePreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 4>&1
         $output | Write-Verbose
         # From Import-Module.
@@ -377,7 +377,7 @@ Describe 'prism install' {
         GivenPrismFile '{}'
         GivenLockFile $script:latestNoOpLockFile
         $env:PRISM_DISABLE_DEEP_DEBUG = 'True'
-        $Global:DebugPreference = [Management.Automation.ActionPreference]::Continue
+        $global:DebugPreference = [Management.Automation.ActionPreference]::Continue
         $output = WhenInstalling 5>&1
         $output | Write-Verbose
 
@@ -468,7 +468,8 @@ Describe 'prism install' {
         ThenInstalled @{ 'NoOp' = '1.0.0' }
     }
 
-    $skip = (Test-Path -Path 'variable:IsMacOS') -and $IsMacOS
+    # This test hangs on Linux and macOS deep inside Save-Module on AppVeyor build servers.
+    $skip = (Test-Path -Path 'env:WHS_CI') -and (-not (Test-Path -Path 'variable:IsWindows') -or -not $IsWindows)
     It 'should find repositories when Get-PSRepository has never been called before' -Skip:$skip {
         GivenPrismFile @'
         {
@@ -494,10 +495,13 @@ Describe 'prism install' {
         $prismJsonPath = Join-Path -Path $script:testRoot -ChildPath 'prism.json' -Resolve -ErrorAction Stop
         $importPath = Join-Path -Path $PSScriptRoot -ChildPath '..\Prism' -Resolve
         Start-Job {
+            # $global:VerbosePreference = 'Continue'
+            # $global:DebugPreference = 'Continue'
             $importPath = $using:importPath
             $prismJsonPath = $using:prismJsonPath
 
             Import-Module -Name $importPath
+            # Set-PSDebug -Trace 1
             prism install -Path $prismJsonPath
         } | Receive-Job -Wait -AutoRemoveJob
         ThenSucceeded
@@ -790,7 +794,7 @@ Describe 'prism install' {
                  -ParameterFilter { ($Path | Split-Path -Leaf) -eq 'NoOp' }
             WhenInstalling -ErrorAction SilentlyContinue
             Should -Not -Invoke 'Save-Module' -ModuleName 'Prism'
-            $Global:Error | Should -Match 'that destination already exists'
+            $global:Error | Should -Match 'that destination already exists'
         }
 
         It 'customizes module directory name' {
